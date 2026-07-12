@@ -15,7 +15,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       final status = authState.status;
       final goingToLogin = state.matchedLocation == '/login';
 
-      if (status == AuthStatus.unknown) return null;
+      // While checking auth status, stay on current route
+      if (status == AuthStatus.unknown) {
+        return null; // Don't redirect while loading
+      }
 
       if (status == AuthStatus.unauthenticated) {
         return goingToLogin ? null : '/login';
@@ -30,7 +33,18 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(
         path: '/',
-        builder: (context, state) => const HomeScreen(),
+        builder: (context, state) {
+          final authState = ref.watch(authProvider);
+          // Show loading screen while checking auth
+          if (authState.status == AuthStatus.unknown) {
+            return const Scaffold(
+              body: Center(
+                child: CircularProgressIndicator(),
+              ),
+            );
+          }
+          return const HomeScreen();
+        },
       ),
       GoRoute(
         path: '/login',

@@ -31,22 +31,37 @@ class AuthState {
 class AuthNotifier extends Notifier<AuthState> {
   @override
   AuthState build() {
-    checkStatus();
+    // Start checking status immediately
+    _initializeAuth();
     return AuthState(status: AuthStatus.unknown);
   }
 
-  Future<void> checkStatus() async {
+  Future<void> _initializeAuth() async {
     final repo = ref.read(authRepositoryProvider);
-    final loggedIn = await repo.isLoggedIn();
-    if (loggedIn) {
-      final user = await repo.getCachedUser();
-      state = AuthState(
-        status: AuthStatus.authenticated,
-        user: user,
-      );
-    } else {
-      state = AuthState(status: AuthStatus.unauthenticated);
+    try {
+      final loggedIn = await repo.isLoggedIn();
+      if (loggedIn) {
+        final user = await repo.getCachedUser();
+        if (mounted) {
+          state = AuthState(
+            status: AuthStatus.authenticated,
+            user: user,
+          );
+        }
+      } else {
+        if (mounted) {
+          state = AuthState(status: AuthStatus.unauthenticated);
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        state = AuthState(status: AuthStatus.unauthenticated);
+      }
     }
+  }
+
+  Future<void> checkStatus() async {
+    await _initializeAuth();
   }
 
   Future<bool> login(String email, String password) async {
