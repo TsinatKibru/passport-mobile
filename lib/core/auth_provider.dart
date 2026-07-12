@@ -42,21 +42,15 @@ class AuthNotifier extends Notifier<AuthState> {
       final loggedIn = await repo.isLoggedIn();
       if (loggedIn) {
         final user = await repo.getCachedUser();
-        if (mounted) {
-          state = AuthState(
-            status: AuthStatus.authenticated,
-            user: user,
-          );
-        }
+        state = AuthState(
+          status: AuthStatus.authenticated,
+          user: user,
+        );
       } else {
-        if (mounted) {
-          state = AuthState(status: AuthStatus.unauthenticated);
-        }
-      }
-    } catch (e) {
-      if (mounted) {
         state = AuthState(status: AuthStatus.unauthenticated);
       }
+    } catch (e) {
+      state = AuthState(status: AuthStatus.unauthenticated);
     }
   }
 
