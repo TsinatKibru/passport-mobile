@@ -6,9 +6,10 @@ import 'package:flutter/material.dart';
 // NEVER use Color(0xFF...) or Colors.* directly in widget code.
 // ─────────────────────────────────────────────────────────────────────────────
 abstract class AppColors {
-  // Brand
-  static const primary = Color(0xFF154B93);       // Cobalt Blue
+  // Brand - ICS Official Colors
+  static const primary = Color(0xFF174da7);       // ICS Blue (from logo)
   static const primaryLight = Color(0xFF3B82F6);  // Light Blue
+  static const primaryDark = Color(0xFF0F3A7A);   // Darker blue for text
   static const onPrimary = Color(0xFFFFFFFF);
 
   // Surface
@@ -16,9 +17,16 @@ abstract class AppColors {
   static const surfaceVariant = Color(0xFFEFF6FF);
   static const onSurface = Color(0xFF0F172A);
   static const onSurfaceVariant = Color(0xFF64748B);
+  
+  // Text colors
+  static const textPrimary = Color(0xFF174da7);     // ICS blue for headings
+  static const textSecondary = Color(0xFF94A3B8);   // Light gray for subtitles
+  static const textBody = Color(0xFF64748B);        // Medium gray for body text
+  static const textHint = Color(0xFFCBD5E1);        // Lighter gray for hints
 
   // Border / divider
   static const border = Color(0xFFE2E8F0);
+  static const inputFill = Color(0xFFF8FAFC);       // Input background
 
   // Semantic states
   static const success = Color(0xFF009E60);       // Ethiopian flag green
@@ -31,7 +39,7 @@ abstract class AppColors {
   static const onDanger = Color(0xFFFFFFFF);
 
   // Status chips — matches PassportStatus / BoxStatus from schema
-  static const statusInBox = Color(0xFF154B93);
+  static const statusInBox = Color(0xFF174da7);
   static const statusIssued = Color(0xFF009E60);
   static const statusFull = Color(0xFFEF2B2D);
   static const statusActive = Color(0xFF009E60);

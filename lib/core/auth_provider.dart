@@ -1,17 +1,28 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/repositories/auth_repository.dart';
+import '../data/models/user.dart';
 
 enum AuthStatus { unknown, authenticated, unauthenticated }
 
 class AuthState {
   final AuthStatus status;
+  final User? user;
   final String? errorMessage;
 
-  AuthState({required this.status, this.errorMessage});
+  AuthState({
+    required this.status,
+    this.user,
+    this.errorMessage,
+  });
 
-  AuthState copyWith({AuthStatus? status, String? errorMessage}) {
+  AuthState copyWith({
+    AuthStatus? status,
+    User? user,
+    String? errorMessage,
+  }) {
     return AuthState(
       status: status ?? this.status,
+      user: user ?? this.user,
       errorMessage: errorMessage ?? this.errorMessage,
     );
   }
@@ -27,17 +38,26 @@ class AuthNotifier extends Notifier<AuthState> {
   Future<void> checkStatus() async {
     final repo = ref.read(authRepositoryProvider);
     final loggedIn = await repo.isLoggedIn();
-    state = AuthState(
-      status: loggedIn ? AuthStatus.authenticated : AuthStatus.unauthenticated,
-    );
+    if (loggedIn) {
+      final user = await repo.getCachedUser();
+      state = AuthState(
+        status: AuthStatus.authenticated,
+        user: user,
+      );
+    } else {
+      state = AuthState(status: AuthStatus.unauthenticated);
+    }
   }
 
   Future<bool> login(String email, String password) async {
     state = state.copyWith(errorMessage: null);
     final repo = ref.read(authRepositoryProvider);
-    final success = await repo.login(email, password);
-    if (success) {
-      state = AuthState(status: AuthStatus.authenticated);
+    final user = await repo.login(email, password);
+    if (user != null) {
+      state = AuthState(
+        status: AuthStatus.authenticated,
+        user: user,
+      );
       return true;
     } else {
       state = AuthState(

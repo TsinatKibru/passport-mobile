@@ -62,7 +62,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               top: 0,
               left: 0,
               right: 0,
-              bottom: MediaQuery.of(context).size.height * 0.45, // Leave 45% for card
+              bottom: MediaQuery.of(context).size.height * 0.45,
               child: Container(
                 width: double.infinity,
                 color: Colors.white,
@@ -78,7 +78,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               left: 0,
               right: 0,
               bottom: 0,
-              top: MediaQuery.of(context).size.height * 0.45, // Start at 45% (overlaps image)
+              top: MediaQuery.of(context).size.height * 0.45,
               child: Container(
                 width: double.infinity,
                 decoration: BoxDecoration(
@@ -130,7 +130,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         TextFormField(
                           controller: _emailController,
                           keyboardType: TextInputType.emailAddress,
-                          style: const TextStyle(fontSize: 14, color: AppColors.textBody),
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: AppColors.textBody,
+                          ),
                           decoration: InputDecoration(
                             hintText: 'Username',
                             hintStyle: const TextStyle(
@@ -179,7 +182,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         TextFormField(
                           controller: _passwordController,
                           obscureText: _obscurePassword,
-                          style: const TextStyle(fontSize: 14, color: AppColors.textBody),
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: AppColors.textBody,
+                          ),
                           decoration: InputDecoration(
                             hintText: 'Password',
                             hintStyle: const TextStyle(
@@ -257,7 +263,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                         _rememberMe = value ?? false;
                                       });
                                     },
-                                    activeColor: AppColors.primary, // Bright blue
+                                    activeColor: AppColors.primary,
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(4),
                                     ),
@@ -268,7 +274,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   'Remember me',
                                   style: TextStyle(
                                     fontSize: 13,
-                                    color: AppColors.primary, // Bright blue
+                                    color: AppColors.primary,
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
@@ -293,7 +299,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 'Forgot password?',
                                 style: TextStyle(
                                   fontSize: 13,
-                                  color: AppColors.primary, // Bright blue
+                                  color: AppColors.primary,
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
@@ -303,14 +309,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         
                         const SizedBox(height: 20),
                         
-                        // Login Button - bright blue, smaller
+                        // Login Button
                         SizedBox(
                           width: double.infinity,
                           height: 48,
                           child: ElevatedButton(
                             onPressed: _loading ? null : _submit,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primary, // Bright blue
+                              backgroundColor: AppColors.primary,
                               foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
@@ -349,5 +355,3 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 }
-
-// Removed CityscapePainter - no longer needed

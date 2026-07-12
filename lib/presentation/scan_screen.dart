@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../data/repositories/passport_repository.dart';
 import '../data/repositories/box_repository.dart';
+import '../data/models/passport.dart';
+import '../data/models/box.dart' as models;
 import '../core/theme/app_theme.dart';
 
 class ScanScreen extends ConsumerStatefulWidget {
@@ -23,10 +25,10 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
   // Scan state
   bool _isScanning = true;
   String? _scannedBoxQr;
-  Map<String, dynamic>? _scannedBox;
-  final List<Map<String, dynamic>> _scannedPassports = [];
+  models.Box? _scannedBox;
+  final List<Passport> _scannedPassports = [];
   Map<String, dynamic>? _scannedSlot;
-  Map<String, dynamic>? _targetPassport;
+  Passport? _targetPassport;
 
   @override
   void dispose() {
@@ -52,32 +54,44 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
         if (_scannedBoxQr == null) {
           // Scanning Box first
           final box = await _boxRepo.getByQr(code);
+          if (box == null) {
+            _showError('Box not found: $code');
+            return;
+          }
           setState(() {
             _scannedBox = box;
             _scannedBoxQr = code;
           });
-          _showSuccess('Box ${box['label']} scanned');
+          _showSuccess('Box ${box.label} scanned');
         } else {
           // Scanning Passports next
           // Check if already in list
-          if (_scannedPassports.any((p) => p['qrCode'] == code)) {
+          if (_scannedPassports.any((p) => p.qrCode == code)) {
             _showError('Passport already in scan list');
             return;
           }
           final passport = await _passportRepo.getByQr(code);
+          if (passport == null) {
+            _showError('Passport not found: $code');
+            return;
+          }
           setState(() {
             _scannedPassports.add(passport);
           });
-          _showSuccess('Passport for ${passport['holderName']} scanned');
+          _showSuccess('Passport for ${passport.holderName} scanned');
         }
       } else if (widget.mode == 'move_box') {
         if (_scannedBoxQr == null) {
           final box = await _boxRepo.getByQr(code);
+          if (box == null) {
+            _showError('Box not found: $code');
+            return;
+          }
           setState(() {
             _scannedBox = box;
             _scannedBoxQr = code;
           });
-          _showSuccess('Box ${box['label']} scanned');
+          _showSuccess('Box ${box.label} scanned');
         } else {
           // Scan Slot next
           final dio = _boxRepo.dio;
@@ -89,10 +103,14 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
         }
       } else if (widget.mode == 'issue') {
         final passport = await _passportRepo.getByQr(code);
+        if (passport == null) {
+          _showError('Passport not found: $code');
+          return;
+        }
         setState(() {
           _targetPassport = passport;
         });
-        _showSuccess('Passport for ${passport['holderName']} scanned');
+        _showSuccess('Passport for ${passport.holderName} scanned');
       }
     } catch (e) {
       _showError('Entity lookup failed for: $code');
@@ -128,44 +146,50 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
   Future<void> _submitAssignment() async {
     if (_scannedBox == null || _scannedPassports.isEmpty) return;
     try {
-      final passportIds = _scannedPassports.map((p) => p['id'] as String).toList();
-      await _passportRepo.batchAssign(
+      final passportIds = _scannedPassports.map((p) => p.id).toList();
+      final success = await _passportRepo.batchAssign(
         passportIds: passportIds,
-        boxId: _scannedBox!['id'],
+        boxId: _scannedBox!.id,
         action: 'PASSPORT_ASSIGNED',
       );
-      if (mounted) {
+      if (mounted && success) {
         _showSuccess('Successfully assigned ${_scannedPassports.length} passports');
         context.pop();
+      } else if (mounted) {
+        _showError('Batch assignment failed');
       }
     } catch (e) {
-      _showError('Batch assignment failed');
+      _showError('Batch assignment failed: $e');
     }
   }
 
   Future<void> _submitBoxMove() async {
     if (_scannedBox == null || _scannedSlot == null) return;
     try {
-      await _boxRepo.move(_scannedBox!['id'], _scannedSlot!['id']);
-      if (mounted) {
+      final success = await _boxRepo.move(_scannedBox!.id, _scannedSlot!['id']);
+      if (mounted && success) {
         _showSuccess('Box successfully moved to slot ${_scannedSlot!['name']}');
         context.pop();
+      } else if (mounted) {
+        _showError('Box move failed');
       }
     } catch (e) {
-      _showError('Box move failed');
+      _showError('Box move failed: $e');
     }
   }
 
   Future<void> _submitPassportIssue() async {
     if (_targetPassport == null) return;
     try {
-      await _passportRepo.issue(_targetPassport!['id']);
-      if (mounted) {
+      final success = await _passportRepo.issue(_targetPassport!.id);
+      if (mounted && success) {
         _showSuccess('Passport successfully issued');
         context.pop();
+      } else if (mounted) {
+        _showError('Passport issue failed');
       }
     } catch (e) {
-      _showError('Passport issue failed');
+      _showError('Passport issue failed: $e');
     }
   }
 
@@ -294,8 +318,8 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
               color: AppColors.surfaceVariant,
               child: ListTile(
                 leading: const Icon(Icons.inventory_2, color: AppColors.primary),
-                title: Text(_scannedBox!['label'] ?? '', style: AppTextStyles.titleMedium),
-                subtitle: Text('Capacity: ${_scannedBox!['occupiedCount']} / ${_scannedBox!['capacity']}'),
+                title: Text(_scannedBox!.label, style: AppTextStyles.titleMedium),
+                subtitle: Text('Capacity: ${_scannedBox!.occupiedCount} / ${_scannedBox!.capacity}'),
               ),
             ),
             const SizedBox(height: 20),
@@ -313,8 +337,8 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
                   return Card(
                     child: ListTile(
                       leading: const Icon(Icons.description, color: Colors.blue),
-                      title: Text(p['holderName'] ?? ''),
-                      subtitle: Text(p['qrCode'] ?? ''),
+                      title: Text(p.holderName),
+                      subtitle: Text(p.qrCode),
                       trailing: IconButton(
                         icon: const Icon(Icons.remove_circle_outline, color: AppColors.danger),
                         onPressed: () {
@@ -351,8 +375,8 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
               color: AppColors.surfaceVariant,
               child: ListTile(
                 leading: const Icon(Icons.inventory_2, color: AppColors.primary),
-                title: Text(_scannedBox!['label'] ?? '', style: AppTextStyles.titleMedium),
-                subtitle: Text('QR: ${_scannedBox!['qrCode']}'),
+                title: Text(_scannedBox!.label, style: AppTextStyles.titleMedium),
+                subtitle: Text('QR: ${_scannedBox!.qrCode}'),
               ),
             ),
             const SizedBox(height: 20),
@@ -406,12 +430,12 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(_targetPassport!['holderName'] ?? '', style: AppTextStyles.titleLarge),
+                    Text(_targetPassport!.holderName, style: AppTextStyles.titleLarge),
                     const SizedBox(height: 8),
-                    Text('ID No: ${_targetPassport!['holderIdNo']}'),
-                    Text('QR Code: ${_targetPassport!['qrCode']}'),
+                    Text('ID No: ${_targetPassport!.holderIdNo}'),
+                    Text('QR Code: ${_targetPassport!.qrCode}'),
                     const SizedBox(height: 12),
-                    Text('Current Status: ${_targetPassport!['status']}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Text('Current Status: ${_targetPassport!.status}', style: const TextStyle(fontWeight: FontWeight.bold)),
                   ],
                 ),
               ),
