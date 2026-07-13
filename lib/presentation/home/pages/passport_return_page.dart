@@ -37,6 +37,9 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
   bool _isSubmitting = false;
   String? _scannedSlotQr;
 
+  // Track currently processing QR codes to prevent spam/duplicate API calls
+  final Set<String> _processingQrs = {};
+
   @override
   void dispose() {
     _boxSearchController.dispose();
@@ -44,10 +47,17 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
   }
 
   void _addPassportByQr(String code) async {
+    // If already in the stack, ignore silently (prevents screen flooding with errors)
     if (_scannedPassports.any((p) => p.qrCode == code)) {
-      _showFeedback('Passport already in stack', true);
       return;
     }
+
+    // Prevent duplicate parallel api requests
+    if (_processingQrs.contains(code)) {
+      return;
+    }
+
+    _processingQrs.add(code);
 
     try {
       final passport = await _passportRepo.getByQr(code);
@@ -62,6 +72,13 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
       _showFeedback('Added: ${passport.holderName}', false);
     } catch (e) {
       _showFeedback('Error looking up passport: $e', true);
+    } finally {
+      // Keep in processing set for 2 seconds to let the user move the camera away
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) {
+          _processingQrs.remove(code);
+        }
+      });
     }
   }
 
