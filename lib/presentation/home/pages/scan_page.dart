@@ -34,6 +34,11 @@ class _ScanPageState extends ConsumerState<ScanPage> with SingleTickerProviderSt
   bool _isScanning = true;
   final List<Map<String, dynamic>> _recentScans = [];
 
+  // Anti-spam scanning state
+  String? _lastScannedCode;
+  DateTime? _lastScanTime;
+  static const Duration _scanCooldown = Duration(seconds: 2);
+
   // Scanned objects
   models.Box? _scannedBox;
   final List<Passport> _scannedPassports = [];
@@ -78,12 +83,23 @@ class _ScanPageState extends ConsumerState<ScanPage> with SingleTickerProviderSt
   }
 
   Future<void> _processScannedCode(String code) async {
+    // Anti-spam protection: ignore rapid duplicate scans
+    final now = DateTime.now();
+    if (_lastScannedCode == code && 
+        _lastScanTime != null && 
+        now.difference(_lastScanTime!) < _scanCooldown) {
+      return; // Ignore duplicate scan
+    }
+    
+    _lastScannedCode = code;
+    _lastScanTime = now;
+    
     setState(() {
       _isScanning = false;
     });
 
-    // Vibrate or show visual cue
-    _showFeedback('Scanned: $code', false);
+    // Track if an error occurred for delay calculation
+    bool hasError = false;
 
     try {
       if (_activeMode == 'assign') {
@@ -92,6 +108,7 @@ class _ScanPageState extends ConsumerState<ScanPage> with SingleTickerProviderSt
           final box = await _boxRepo.getByQr(code);
           if (box == null) {
             _showFeedback('Box not found: $code', true);
+            hasError = true;
           } else {
             setState(() {
               _scannedBox = box;
@@ -109,12 +126,14 @@ class _ScanPageState extends ConsumerState<ScanPage> with SingleTickerProviderSt
           // Scanning Passport QR next
           if (_scannedPassports.any((p) => p.qrCode == code)) {
             _showFeedback('Passport already in current batch', true);
+            hasError = true;
             setState(() => _isScanning = true);
             return;
           }
           final passport = await _passportRepo.getByQr(code);
           if (passport == null) {
             _showFeedback('Passport not found: $code', true);
+            hasError = true;
           } else {
             setState(() {
               _scannedPassports.add(passport);
@@ -135,6 +154,7 @@ class _ScanPageState extends ConsumerState<ScanPage> with SingleTickerProviderSt
           final box = await _boxRepo.getByQr(code);
           if (box == null) {
             _showFeedback('Box not found: $code', true);
+            hasError = true;
           } else {
             setState(() {
               _scannedBox = box;
@@ -145,6 +165,7 @@ class _ScanPageState extends ConsumerState<ScanPage> with SingleTickerProviderSt
           final passport = await _passportRepo.getByQr(code);
           if (passport == null) {
             _showFeedback('Passport not found: $code', true);
+            hasError = true;
           } else {
             setState(() {
               _scannedPassports.add(passport);
@@ -157,6 +178,7 @@ class _ScanPageState extends ConsumerState<ScanPage> with SingleTickerProviderSt
         final passport = await _passportRepo.getByQr(code);
         if (passport == null) {
           _showFeedback('Passport not found: $code', true);
+          hasError = true;
         } else {
           setState(() {
             _scannedSinglePassport = passport;
@@ -175,6 +197,7 @@ class _ScanPageState extends ConsumerState<ScanPage> with SingleTickerProviderSt
           final box = await _boxRepo.getByQr(code);
           if (box == null) {
             _showFeedback('Box not found: $code', true);
+            hasError = true;
           } else {
             setState(() {
               _scannedBox = box;
@@ -193,6 +216,7 @@ class _ScanPageState extends ConsumerState<ScanPage> with SingleTickerProviderSt
           final res = await _boxRepo.dio.get('/location/slots/qr/$code');
           if (res.data == null) {
             _showFeedback('Slot not found: $code', true);
+            hasError = true;
           } else {
             setState(() {
               _scannedSlot = res.data;
@@ -238,13 +262,20 @@ class _ScanPageState extends ConsumerState<ScanPage> with SingleTickerProviderSt
             _showBoxDetailsDialog(box);
           } else {
             _showFeedback('QR code not registered in system: $code', true);
+            hasError = true;
           }
         }
       }
     } catch (e) {
       _showFeedback('Lookup failed: $e', true);
+      hasError = true;
     } finally {
-      Future.delayed(const Duration(seconds: 1), () {
+      // Use different delays: 3s for errors, 1s for success
+      Duration delayDuration = hasError 
+          ? const Duration(seconds: 3) 
+          : const Duration(seconds: 1);
+      
+      Future.delayed(delayDuration, () {
         if (mounted) {
           setState(() {
             _isScanning = true;

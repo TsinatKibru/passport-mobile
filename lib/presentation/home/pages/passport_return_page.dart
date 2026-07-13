@@ -32,6 +32,14 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
   models.Box? _selectedBox;
   bool _isLoadingBoxes = false;
   final TextEditingController _boxSearchController = TextEditingController();
+  
+  // Pagination State
+  int _currentPage = 1;
+  int _totalPages = 1;
+  int _totalBoxes = 0;
+  bool _hasMoreBoxes = false;
+  String _searchQuery = '';
+  String? _selectedRoomId;
 
   // Verification state
   bool _isSubmitting = false;
@@ -82,22 +90,60 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
     }
   }
 
-  void _loadAvailableBoxes() async {
+  void _loadAvailableBoxes({bool resetPage = true}) async {
+    if (resetPage) {
+      setState(() {
+        _currentPage = 1;
+        _availableBoxes.clear();
+      });
+    }
+    
     setState(() {
       _isLoadingBoxes = true;
       _currentStep = 2;
     });
 
     try {
-      final boxes = await _boxRepo.getAvailable(_scannedPassports.length);
+      final response = await _boxRepo.getAvailablePaginated(
+        _scannedPassports.length,
+        page: _currentPage,
+        limit: 20,
+        search: _searchQuery.isNotEmpty ? _searchQuery : null,
+        roomId: _selectedRoomId,
+      );
+      
       setState(() {
-        _availableBoxes = boxes;
+        if (resetPage) {
+          _availableBoxes = response.data;
+        } else {
+          _availableBoxes.addAll(response.data);
+        }
+        _totalPages = response.totalPages;
+        _totalBoxes = response.total;
+        _hasMoreBoxes = response.hasMore;
         _isLoadingBoxes = false;
       });
     } catch (e) {
       setState(() => _isLoadingBoxes = false);
       _showFeedback('Failed to load matching boxes', true);
     }
+  }
+  
+  void _loadNextPage() async {
+    if (_hasMoreBoxes && !_isLoadingBoxes) {
+      setState(() => _currentPage++);
+      _loadAvailableBoxes(resetPage: false);
+    }
+  }
+  
+  void _onSearchChanged(String query) {
+    setState(() => _searchQuery = query);
+    // Debounce search by 500ms
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (_searchQuery == query) {
+        _loadAvailableBoxes(resetPage: true);
+      }
+    });
   }
 
   void _lookupBoxManually(String qrCode) async {
@@ -449,7 +495,8 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
             style: const TextStyle(color: AppColors.textBody, fontSize: 12),
           ),
           const SizedBox(height: 16),
-          // Search manual box input
+          
+          // Search input field
           Container(
             decoration: BoxDecoration(
               color: Colors.white,
@@ -458,10 +505,20 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
             ),
             child: TextField(
               controller: _boxSearchController,
+              onChanged: _onSearchChanged,
               onSubmitted: _lookupBoxManually,
               decoration: InputDecoration(
-                hintText: 'Or scan/type Box QR Code (e.g. BOX-0001)...',
+                hintText: 'Search by box label or QR code...',
                 prefixIcon: const Icon(Icons.search_rounded),
+                suffixIcon: _searchQuery.isNotEmpty 
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _boxSearchController.clear();
+                          _onSearchChanged('');
+                        },
+                      )
+                    : null,
                 border: InputBorder.none,
                 enabledBorder: InputBorder.none,
                 focusedBorder: InputBorder.none,
@@ -470,37 +527,148 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
               ),
             ),
           ),
+          const SizedBox(height: 8),
+          
+          // Results summary
+          if (_totalBoxes > 0)
+            Text(
+              'Found $_totalBoxes boxes • Page $_currentPage of $_totalPages',
+              style: const TextStyle(fontSize: 11, color: AppColors.textBody),
+            ),
           const SizedBox(height: 16),
+          
+          // Box list with pagination
           Expanded(
-            child: _isLoadingBoxes
+            child: _isLoadingBoxes && _availableBoxes.isEmpty
                 ? const Center(child: CircularProgressIndicator())
                 : _availableBoxes.isEmpty
-                    ? const Center(
-                        child: Text('No suitable boxes found. Try searching manually.'),
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: const [
+                            Icon(Icons.search_off, size: 48, color: AppColors.textHint),
+                            SizedBox(height: 8),
+                            Text(
+                              'No suitable boxes found.\nTry different search terms or scan a box QR code.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: AppColors.textBody),
+                            ),
+                          ],
+                        ),
                       )
-                    : ListView.builder(
-                        itemCount: _availableBoxes.length,
-                        itemBuilder: (ctx, idx) {
-                          final box = _availableBoxes[idx];
-                          return Card(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            color: Colors.white,
-                            child: ListTile(
-                              leading: const Icon(Icons.inventory_2_outlined, color: AppColors.primary),
-                              title: Text(box.label, style: const TextStyle(fontWeight: FontWeight.bold)),
-                              subtitle: Text(
-                                'Space: ${box.occupiedCount}/${box.capacity} occupied • ${box.location ?? "No Location"}',
-                              ),
-                              trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
-                              onTap: () {
-                                setState(() {
-                                  _selectedBox = box;
-                                  _currentStep = 3;
-                                });
+                    : Column(
+                        children: [
+                          // Box list
+                          Expanded(
+                            child: ListView.builder(
+                              itemCount: _availableBoxes.length + (_hasMoreBoxes ? 1 : 0),
+                              itemBuilder: (ctx, idx) {
+                                // Load more button
+                                if (idx == _availableBoxes.length) {
+                                  return Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 16),
+                                    child: Center(
+                                      child: _isLoadingBoxes
+                                          ? const CircularProgressIndicator()
+                                          : ElevatedButton.icon(
+                                              onPressed: _loadNextPage,
+                                              icon: const Icon(Icons.expand_more),
+                                              label: Text('Load More (${_totalBoxes - _availableBoxes.length} remaining)'),
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                                                foregroundColor: AppColors.primary,
+                                              ),
+                                            ),
+                                    ),
+                                  );
+                                }
+                                
+                                // Box item
+                                final box = _availableBoxes[idx];
+                                final vacantSlots = box.capacity - box.occupiedCount;
+                                return Card(
+                                  margin: const EdgeInsets.only(bottom: 12),
+                                  color: Colors.white,
+                                  child: ListTile(
+                                    leading: Icon(
+                                      Icons.inventory_2_outlined, 
+                                      color: vacantSlots >= _scannedPassports.length 
+                                          ? AppColors.primary 
+                                          : AppColors.textHint,
+                                    ),
+                                    title: Text(
+                                      box.label, 
+                                      style: const TextStyle(fontWeight: FontWeight.bold),
+                                    ),
+                                    subtitle: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Space: ${box.occupiedCount}/${box.capacity} occupied • $vacantSlots vacant',
+                                          style: TextStyle(
+                                            color: vacantSlots >= _scannedPassports.length 
+                                                ? AppColors.textBody 
+                                                : AppColors.danger,
+                                          ),
+                                        ),
+                                        if (box.location != null)
+                                          Text(
+                                            'Location: ${box.location}',
+                                            style: const TextStyle(fontSize: 11, color: AppColors.textHint),
+                                          ),
+                                      ],
+                                    ),
+                                    trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
+                                    enabled: vacantSlots >= _scannedPassports.length,
+                                    onTap: vacantSlots >= _scannedPassports.length
+                                        ? () {
+                                            setState(() {
+                                              _selectedBox = box;
+                                              _currentStep = 3;
+                                            });
+                                          }
+                                        : null,
+                                  ),
+                                );
                               },
                             ),
-                          );
-                        },
+                          ),
+                          
+                          // Pagination controls (alternative to load more)
+                          if (_totalPages > 1)
+                            Container(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  TextButton.icon(
+                                    onPressed: _currentPage > 1 && !_isLoadingBoxes
+                                        ? () {
+                                            setState(() => _currentPage--);
+                                            _loadAvailableBoxes(resetPage: true);
+                                          }
+                                        : null,
+                                    icon: const Icon(Icons.chevron_left),
+                                    label: const Text('Previous'),
+                                  ),
+                                  Text(
+                                    'Page $_currentPage of $_totalPages',
+                                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                  ),
+                                  TextButton.icon(
+                                    onPressed: _currentPage < _totalPages && !_isLoadingBoxes
+                                        ? () {
+                                            setState(() => _currentPage++);
+                                            _loadAvailableBoxes(resetPage: true);
+                                          }
+                                        : null,
+                                    icon: const Icon(Icons.chevron_right),
+                                    label: const Text('Next'),
+                                  ),
+                                ],
+                              ),
+                            ),
+                        ],
                       ),
           ),
         ],

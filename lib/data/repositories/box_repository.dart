@@ -1,5 +1,6 @@
 import 'base_repository.dart';
 import '../models/box.dart';
+import '../models/paginated_response.dart';
 
 /// Handles all movable box API calls.
 class BoxRepository extends BaseRepository {
@@ -48,7 +49,40 @@ class BoxRepository extends BaseRepository {
     }
   }
 
-  /// GET /boxes/available — get boxes with at least N vacant spaces
+  /// GET /boxes/available — get boxes with at least N vacant spaces (with pagination)
+  Future<PaginatedResponse<Box>> getAvailablePaginated(
+    int neededSpaces, {
+    int page = 1, 
+    int limit = 20,
+    String? search,
+    String? roomId,
+  }) async {
+    try {
+      final res = await dio.get(
+        '/boxes/available',
+        queryParameters: {
+          'neededSpaces': neededSpaces,
+          'page': page,
+          'limit': limit,
+          if (search != null && search.isNotEmpty) 'search': search,
+          if (roomId != null && roomId.isNotEmpty) 'roomId': roomId,
+        },
+      );
+      return PaginatedResponse.fromJson(res.data, (json) => Box.fromJson(json));
+    } catch (e) {
+      print('Error fetching available boxes: $e');
+      return PaginatedResponse(
+        data: [],
+        total: 0,
+        page: page,
+        limit: limit,
+        totalPages: 0,
+        hasMore: false,
+      );
+    }
+  }
+
+  /// GET /boxes/available — get boxes with at least N vacant spaces (legacy method)
   Future<List<Box>> getAvailable(int neededSpaces, {int page = 1, int limit = 20}) async {
     try {
       final res = await dio.get(
