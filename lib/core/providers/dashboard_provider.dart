@@ -10,3 +10,9 @@ final dashboardStatsProvider = FutureProvider<DashboardStats?>((ref) async {
   final repo = ref.read(dashboardRepositoryProvider);
   return await repo.getStats();
 });
+
+final activityLogsProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
+  final repo = ref.read(dashboardRepositoryProvider);
+  return await repo.getRecentActivity(limit: 5);
+});
+

@@ -3,7 +3,30 @@ import '../models/box.dart';
 
 /// Handles all movable box API calls.
 class BoxRepository extends BaseRepository {
-  /// GET /boxes/qr/:qrCode
+  /// GET /boxes?status=...&search=...&page=...&limit=...
+  /// Requires ADMIN role. Used by BoxesPage for the full inventory list.
+  Future<List<Box>> getAll({
+    String? status,
+    String? search,
+    int page = 1,
+    int limit = 30,
+  }) async {
+    try {
+      final res = await dio.get('/boxes', queryParameters: {
+        if (status != null && status != 'ALL') 'status': status,
+        if (search != null && search.isNotEmpty) 'search': search,
+        'page': page,
+        'limit': limit,
+      });
+      final data = res.data['data'] ?? res.data;
+      return (data as List).map((json) => Box.fromJson(json)).toList();
+    } catch (e) {
+      print('Error fetching all boxes: $e');
+      return [];
+    }
+  }
+
+
   Future<Box?> getByQr(String qrCode) async {
     try {
       final res = await dio.get('/boxes/qr/$qrCode');

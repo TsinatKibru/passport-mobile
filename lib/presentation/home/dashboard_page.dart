@@ -12,6 +12,7 @@ import 'widgets/quick_action_card.dart';
 import 'widgets/statistics_grid.dart';
 import 'widgets/activity_card.dart';
 
+
 class DashboardPage extends ConsumerWidget {
   final ValueChanged<int>? onNavigateToTab;
 
@@ -23,9 +24,13 @@ class DashboardPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final statsAsync = ref.watch(dashboardStatsProvider);
-    
-    // We will pull the real pending tasks count if available, otherwise default to a mockup representing outstanding assignments
-    final int pendingTasksCount = 12; 
+    final logsAsync = ref.watch(activityLogsProvider);
+
+    // Use real "IN_BOX" count as pending workload; fallback to 0 while loading
+    final int pendingTasksCount = statsAsync.maybeWhen(
+      data: (stats) => stats?.inBox ?? 0,
+      orElse: () => 0,
+    );
 
     return Scaffold(
       backgroundColor: AppColors.surface,
@@ -33,6 +38,7 @@ class DashboardPage extends ConsumerWidget {
         child: RefreshIndicator(
           onRefresh: () async {
             ref.invalidate(dashboardStatsProvider);
+            ref.invalidate(activityLogsProvider);
           },
           child: CustomScrollView(
             slivers: [
@@ -157,34 +163,56 @@ class DashboardPage extends ConsumerWidget {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      const ActivityCard(
-                        title: 'Passport Issued',
-                        subtitle: 'Ahmed Mohamed • PP-938210',
-                        timestamp: '12m ago',
-                        actionType: 'PASSPORT_ISSUED',
+                      logsAsync.when(
+                        data: (logs) {
+                          if (logs.isEmpty) {
+                            return const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 20),
+                              child: Center(
+                                child: Text(
+                                  'No recent activity',
+                                  style: TextStyle(color: AppColors.textBody),
+                                ),
+                              ),
+                            );
+                          }
+                          return Column(
+                            children: logs.map((log) {
+                              final action = log['action'] as String? ?? '';
+                              final passport = log['passport'] as Map<String, dynamic>?;
+                              final box = log['box'] as Map<String, dynamic>?;
+                              final String title = _actionLabel(action);
+                              final String subtitle = _buildSubtitle(action, passport, box);
+                              final String timestamp = _formatTimestamp(log['createdAt']);
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 8.0),
+                                child: ActivityCard(
+                                  title: title,
+                                  subtitle: subtitle,
+                                  timestamp: timestamp,
+                                  actionType: action,
+                                ),
+                              );
+                            }).toList(),
+                          );
+                        },
+                        loading: () => const Center(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(vertical: 20),
+                            child: CircularProgressIndicator(),
+                          ),
+                        ),
+                        error: (_, __) => const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 20),
+                          child: Center(
+                            child: Text(
+                              'Could not load activity logs',
+                              style: TextStyle(color: AppColors.textBody),
+                            ),
+                          ),
+                        ),
                       ),
-                      const SizedBox(height: 8),
-                      const ActivityCard(
-                        title: 'Box Relocated',
-                        subtitle: 'Box 012 -> Room B / Row 2',
-                        timestamp: '45m ago',
-                        actionType: 'BOX_MOVED',
-                      ),
-                      const SizedBox(height: 8),
-                      const ActivityCard(
-                        title: 'Custody Returned',
-                        subtitle: 'Fatuma Kebede • PP-194827',
-                        timestamp: '2h ago',
-                        actionType: 'PASSPORT_RETURNED',
-                      ),
-                      const SizedBox(height: 8),
-                      const ActivityCard(
-                        title: 'Batch Assignment',
-                        subtitle: '8 passports stored in Box 001',
-                        timestamp: '3h ago',
-                        actionType: 'PASSPORT_ASSIGNED',
-                      ),
-                      
+
                       // Extra space at bottom to prevent bottom nav overlay
                       const SizedBox(height: 100),
                     ],
@@ -196,6 +224,43 @@ class DashboardPage extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  String _actionLabel(String action) {
+    switch (action) {
+      case 'PASSPORT_ASSIGNED': return 'Batch Assignment';
+      case 'PASSPORT_RETURNED': return 'Custody Returned';
+      case 'PASSPORT_ISSUED':   return 'Passport Issued';
+      case 'BOX_MOVED':         return 'Box Relocated';
+      default: return action;
+    }
+  }
+
+  String _buildSubtitle(String action, Map<String, dynamic>? passport, Map<String, dynamic>? box) {
+    final passportName = passport?['holderName'] as String?;
+    final passportQr   = passport?['qrCode'] as String?;
+    final boxLabel     = box?['label'] as String?;
+
+    if (passportName != null && passportQr != null) {
+      return '$passportName • $passportQr';
+    }
+    if (boxLabel != null) {
+      return 'Box: $boxLabel';
+    }
+    return '';
+  }
+
+  String _formatTimestamp(dynamic createdAt) {
+    if (createdAt == null) return '';
+    try {
+      final dt = DateTime.parse(createdAt.toString()).toLocal();
+      final diff = DateTime.now().difference(dt);
+      if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+      if (diff.inHours < 24)   return '${diff.inHours}h ago';
+      return '${diff.inDays}d ago';
+    } catch (_) {
+      return '';
+    }
   }
 
   void _showNotificationsSheet(BuildContext context) {

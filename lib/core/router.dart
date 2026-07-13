@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'auth_provider.dart';
 import '../presentation/login_screen.dart';
 import '../presentation/home/home_screen.dart';
-import '../presentation/scan_screen.dart';
+import '../presentation/home/pages/scan_page.dart';
+import '../presentation/home/pages/passport_issue_page.dart';
+import '../presentation/home/pages/passport_return_page.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authProvider);
@@ -54,7 +56,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/scan',
         builder: (context, state) {
           final mode = state.uri.queryParameters['mode'] ?? 'assign';
-          return ScanScreen(mode: mode);
+          if (mode == 'issue') {
+            return const PassportIssuePage();
+          } else if (mode == 'return') {
+            return const PassportReturnPage();
+          }
+          return ScanPage(initialMode: mode);
         },
       ),
     ],

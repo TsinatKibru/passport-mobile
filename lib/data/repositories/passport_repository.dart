@@ -5,6 +5,28 @@ import '../models/passport.dart';
 /// Business logic (capacity checks, location cascades) lives in the backend —
 /// this repository is purely a typed HTTP wrapper.
 class PassportRepository extends BaseRepository {
+  /// GET /passports?status=...&search=...&page=...&limit=...
+  Future<List<Passport>> getAll({
+    String? status,
+    String? search,
+    int page = 1,
+    int limit = 20,
+  }) async {
+    try {
+      final res = await dio.get('/passports', queryParameters: {
+        if (status != null && status != 'ALL') 'status': status,
+        if (search != null && search.isNotEmpty) 'search': search,
+        'page': page,
+        'limit': limit,
+      });
+      final data = res.data['data'] ?? res.data;
+      return (data as List).map((json) => Passport.fromJson(json)).toList();
+    } catch (e) {
+      print('Error fetching passports: $e');
+      return [];
+    }
+  }
+
   /// GET /passports/qr/:qrCode
   Future<Passport?> getByQr(String qrCode) async {
     try {

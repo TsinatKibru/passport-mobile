@@ -10,7 +10,9 @@ import '../../../data/models/box.dart' as models;
 import '../widgets/glass_card.dart';
 
 class ScanPage extends ConsumerStatefulWidget {
-  const ScanPage({super.key});
+  final String? initialMode;
+
+  const ScanPage({super.key, this.initialMode});
 
   @override
   ConsumerState<ScanPage> createState() => _ScanPageState();
@@ -27,7 +29,7 @@ class _ScanPageState extends ConsumerState<ScanPage> with SingleTickerProviderSt
   late Animation<double> _scanLineAnimation;
 
   // Scanner State
-  String _activeMode = 'assign'; // 'assign', 'return', 'issue', 'verify'
+  late String _activeMode; // 'assign', 'return', 'issue', 'verify', 'move_box'
   bool _isTorchOn = false;
   bool _isScanning = true;
   final List<Map<String, dynamic>> _recentScans = [];
@@ -41,6 +43,7 @@ class _ScanPageState extends ConsumerState<ScanPage> with SingleTickerProviderSt
   @override
   void initState() {
     super.initState();
+    _activeMode = widget.initialMode ?? 'assign';
     _animationController = AnimationController(
       duration: const Duration(seconds: 2),
       vsync: this,
@@ -167,6 +170,43 @@ class _ScanPageState extends ConsumerState<ScanPage> with SingleTickerProviderSt
           });
           _showFeedback('Passport identified: ${passport.holderName}', false);
         }
+      } else if (_activeMode == 'move_box') {
+        if (_scannedBox == null) {
+          final box = await _boxRepo.getByQr(code);
+          if (box == null) {
+            _showFeedback('Box not found: $code', true);
+          } else {
+            setState(() {
+              _scannedBox = box;
+              _recentScans.insert(0, {
+                'type': 'Box Scanned',
+                'label': box.label,
+                'code': code,
+                'time': 'Just now',
+                'success': true,
+              });
+            });
+            _showFeedback('Box ${box.label} scanned.', false);
+          }
+        } else {
+          // Scan Slot next
+          final res = await _boxRepo.dio.get('/location/slots/qr/$code');
+          if (res.data == null) {
+            _showFeedback('Slot not found: $code', true);
+          } else {
+            setState(() {
+              _scannedSlot = res.data;
+              _recentScans.insert(0, {
+                'type': 'Slot Scanned',
+                'label': res.data['name'] ?? '',
+                'code': code,
+                'time': 'Just now',
+                'success': true,
+              });
+            });
+            _showFeedback('Slot ${res.data['name']} scanned.', false);
+          }
+        }
       } else {
         // Verify code
         final passport = await _passportRepo.getByQr(code);
@@ -283,6 +323,28 @@ class _ScanPageState extends ConsumerState<ScanPage> with SingleTickerProviderSt
       }
     } catch (e) {
       _showFeedback('Error: $e', true);
+    } finally {
+      setState(() => _isScanning = true);
+    }
+  }
+
+  Future<void> _submitBoxMove() async {
+    if (_scannedBox == null || _scannedSlot == null) return;
+    setState(() => _isScanning = false);
+    try {
+      final success = await _boxRepo.move(_scannedBox!.id, _scannedSlot!['id']);
+      if (success) {
+        _showFeedback('Box successfully moved to slot ${_scannedSlot!['name']}', false);
+        if (Navigator.canPop(context)) {
+          Navigator.pop(context);
+        } else {
+          _resetCurrentScan();
+        }
+      } else {
+        _showFeedback('Box move failed', true);
+      }
+    } catch (e) {
+      _showFeedback('Error moving box: $e', true);
     } finally {
       setState(() => _isScanning = true);
     }
@@ -577,6 +639,7 @@ class _ScanPageState extends ConsumerState<ScanPage> with SingleTickerProviderSt
             _buildModeTab('assign', 'Assign Box', Icons.inventory_2_rounded),
             _buildModeTab('return', 'Return Custody', Icons.swap_horizontal_circle_rounded),
             _buildModeTab('issue', 'Issue Owner', Icons.assignment_turned_in_rounded),
+            _buildModeTab('move_box', 'Move Box', Icons.drive_file_move_outlined),
             _buildModeTab('verify', 'Quick Verify', Icons.verified_user_rounded),
           ],
         ),
@@ -670,6 +733,17 @@ class _ScanPageState extends ConsumerState<ScanPage> with SingleTickerProviderSt
       } else {
         text = 'Box Locked. Scan Returned Passports.';
         color = AppColors.warning;
+      }
+    } else if (_activeMode == 'move_box') {
+      if (_scannedBox == null) {
+        text = 'Scan BOX QR Code to Move';
+        color = AppColors.primary;
+      } else if (_scannedSlot == null) {
+        text = 'Scan DESTINATION SLOT QR Code';
+        color = Colors.deepPurple;
+      } else {
+        text = 'Slot Locked. Confirm movement.';
+        color = AppColors.success;
       }
     } else if (_activeMode == 'issue') {
       text = 'Scan Passport QR Code to Issue';
@@ -848,6 +922,123 @@ class _ScanPageState extends ConsumerState<ScanPage> with SingleTickerProviderSt
             child: Text(
               _activeMode == 'return' ? 'Confirm Return Custody' : 'Confirm Box Assignment',
               style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      );
+    } else if (_activeMode == 'move_box') {
+      if (_scannedBox == null) {
+        return const Center(
+          child: Padding(
+            padding: EdgeInsets.symmetric(vertical: 40),
+            child: Text(
+              'Scan a Box QR code to initiate movement.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: AppColors.textBody, fontSize: 13),
+            ),
+          ),
+        );
+      }
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Box to move details
+          const Text(
+            'BOX TO MOVE',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: AppColors.textBody, letterSpacing: 0.8),
+          ),
+          const SizedBox(height: 8),
+          GlassCard(
+            padding: const EdgeInsets.all(12),
+            borderRadius: 16,
+            child: Row(
+              children: [
+                const Icon(Icons.inventory_2_rounded, color: AppColors.primary),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _scannedBox!.label,
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                      ),
+                      Text(
+                        'Current Location: ${_scannedBox!.location ?? "Unassigned Slot"}',
+                        style: const TextStyle(fontSize: 11, color: AppColors.textBody),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.refresh, size: 18),
+                  onPressed: _resetCurrentScan,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Target slot details
+          const Text(
+            'DESTINATION SLOT',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: AppColors.textBody, letterSpacing: 0.8),
+          ),
+          const SizedBox(height: 8),
+
+          if (_scannedSlot == null)
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 32),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.border, style: BorderStyle.values[1]),
+              ),
+              child: const Center(
+                child: Text('Scan destination Slot QR code next...', style: TextStyle(fontSize: 12, color: AppColors.textBody)),
+              ),
+            )
+          else
+            GlassCard(
+              padding: const EdgeInsets.all(12),
+              borderRadius: 16,
+              child: Row(
+                children: [
+                  const Icon(Icons.place_rounded, color: Colors.deepPurple),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _scannedSlot!['name'] ?? 'Unknown Slot',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                        ),
+                        Text(
+                          _scannedSlot!['location'] ?? '',
+                          style: const TextStyle(fontSize: 11, color: AppColors.textBody),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.remove_circle_outline, size: 18, color: AppColors.danger),
+                    onPressed: () => setState(() => _scannedSlot = null),
+                  ),
+                ],
+              ),
+            ),
+
+          const SizedBox(height: 24),
+          ElevatedButton(
+            onPressed: (_scannedBox != null && _scannedSlot != null) ? _submitBoxMove : null,
+            style: ElevatedButton.styleFrom(
+              minimumSize: const Size(double.infinity, 48),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            ),
+            child: const Text(
+              'Confirm Box Move',
+              style: TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
         ],

@@ -16,131 +16,89 @@ class BoxesPage extends StatefulWidget {
 class _BoxesPageState extends State<BoxesPage> {
   final BoxRepository _boxRepo = BoxRepository();
   final TextEditingController _searchController = TextEditingController();
-  
+
   String _searchQuery = '';
   String _activeFilter = 'ALL'; // 'ALL', 'ACTIVE', 'FULL', 'INACTIVE'
   bool _isLoading = false;
-  
-  // List of active/cached boxes on shift
-  final List<models.Box> _localBoxes = [
-    models.Box(
-      id: 'box1',
-      qrCode: 'BOX-0001',
-      label: 'Box 001',
-      capacity: 10,
-      occupiedCount: 7,
-      status: 'ACTIVE',
-      location: 'HQ Building / Room A / Shelf 01 / Row B / Slot 3',
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
-    ),
-    models.Box(
-      id: 'box2',
-      qrCode: 'BOX-0002',
-      label: 'Box 002',
-      capacity: 10,
-      occupiedCount: 10,
-      status: 'FULL',
-      location: 'HQ Building / Room A / Shelf 02 / Row A / Slot 1',
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
-    ),
-    models.Box(
-      id: 'box3',
-      qrCode: 'BOX-0003',
-      label: 'Box 003',
-      capacity: 15,
-      occupiedCount: 3,
-      status: 'ACTIVE',
-      location: 'HQ Building / Room B / Shelf 01 / Row C / Slot 5',
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
-    ),
-    models.Box(
-      id: 'box4',
-      qrCode: 'BOX-0004',
-      label: 'Box 004',
-      capacity: 10,
-      occupiedCount: 0,
-      status: 'INACTIVE',
-      location: 'HQ Building / Storage / Unassigned',
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
-    ),
-  ];
+  String? _errorMessage;
 
-  List<models.Box> _searchResult = [];
+  List<models.Box> _boxes = [];
 
   @override
   void initState() {
     super.initState();
-    _searchResult = List.from(_localBoxes);
-  }
-
-  Future<void> _performSearch(String query) async {
-    if (query.isEmpty) {
-      setState(() {
-        _searchResult = List.from(_localBoxes);
-        _isLoading = false;
-      });
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      // If it looks like a QR code or full label, query the API
-      if (query.toUpperCase().startsWith('BOX-')) {
-        final box = await _boxRepo.getByQr(query.toUpperCase());
-        if (mounted) {
-          setState(() {
-            if (box != null) {
-              _searchResult = [box];
-            } else {
-              _searchResult = [];
-            }
-            _isLoading = false;
-          });
-        }
-        return;
-      }
-      
-      // Local fallback filter
-      final filtered = _localBoxes.where((b) {
-        final label = b.label.toLowerCase();
-        final qr = b.qrCode.toLowerCase();
-        final loc = (b.location ?? '').toLowerCase();
-        final q = query.toLowerCase();
-        return label.contains(q) || qr.contains(q) || loc.contains(q);
-      }).toList();
-
-      setState(() {
-        _searchResult = filtered;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
-
-  List<models.Box> _getFilteredBoxes() {
-    if (_activeFilter == 'ALL') return _searchResult;
-    return _searchResult.where((b) => b.status == _activeFilter).toList();
+    _fetchBoxes();
   }
 
   @override
-  Widget build(BuildContext context) {
-    final displayBoxes = _getFilteredBoxes();
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
+  Future<void> _fetchBoxes() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+    try {
+      final results = await _boxRepo.getAll(
+        status: _activeFilter == 'ALL' ? null : _activeFilter,
+        search: _searchQuery.isNotEmpty ? _searchQuery : null,
+      );
+      if (mounted) {
+        setState(() {
+          _boxes = results;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = 'Failed to load boxes. Check your connection.';
+        });
+      }
+    }
+  }
+
+  Future<void> _onFilterChanged(String filter) async {
+    setState(() => _activeFilter = filter);
+    await _fetchBoxes();
+  }
+
+  Future<void> _onSearch(String query) async {
+    setState(() => _searchQuery = query);
+    // If it looks like a QR code, use single-item QR lookup for speed
+    if (query.toUpperCase().startsWith('BOX-')) {
+      setState(() => _isLoading = true);
+      try {
+        final box = await _boxRepo.getByQr(query.toUpperCase());
+        if (mounted) {
+          setState(() {
+            _boxes = box != null ? [box] : [];
+            _isLoading = false;
+          });
+        }
+      } catch (_) {
+        if (mounted) setState(() => _isLoading = false);
+      }
+      return;
+    }
+    await _fetchBoxes();
+  }
+
+
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.surface,
       body: FingerprintBackground(
-        child: CustomScrollView(
-          slivers: [
+        child: RefreshIndicator(
+          onRefresh: _fetchBoxes,
+          child: CustomScrollView(
+            slivers: [
             // Premium Large Header
             SliverAppBar(
               expandedHeight: 120,
@@ -193,7 +151,7 @@ class _BoxesPageState extends State<BoxesPage> {
                       ),
                       child: TextField(
                         controller: _searchController,
-                        onSubmitted: _performSearch,
+                        onSubmitted: _onSearch,
                         style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                         decoration: InputDecoration(
                           hintText: 'Enter Box QR Code (e.g. BOX-0001)...',
@@ -203,7 +161,7 @@ class _BoxesPageState extends State<BoxesPage> {
                                   icon: const Icon(Icons.clear, size: 18),
                                   onPressed: () {
                                     _searchController.clear();
-                                    _performSearch('');
+                                    _onSearch('');
                                   },
                                 )
                               : null,
@@ -240,31 +198,46 @@ class _BoxesPageState extends State<BoxesPage> {
             // Boxes List Grid
             if (_isLoading)
               const SliverFillRemaining(
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (_errorMessage != null)
+              SliverFillRemaining(
                 child: Center(
-                  child: CircularProgressIndicator(),
+                  child: Padding(
+                    padding: const EdgeInsets.all(32),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.wifi_off_rounded, size: 48, color: AppColors.textBody),
+                        const SizedBox(height: 16),
+                        Text(_errorMessage!, textAlign: TextAlign.center,
+                            style: const TextStyle(color: AppColors.textBody)),
+                        const SizedBox(height: 16),
+                        ElevatedButton.icon(
+                          onPressed: _fetchBoxes,
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               )
-            else if (displayBoxes.isEmpty)
+            else if (_boxes.isEmpty)
               SliverFillRemaining(
                 child: Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(
-                        Icons.inventory_2_rounded,
-                        size: 64,
-                        color: AppColors.primary.withOpacity(0.15),
-                      ),
+                      Icon(Icons.inventory_2_rounded, size: 64,
+                          color: AppColors.primary.withOpacity(0.15)),
                       const SizedBox(height: 16),
-                      const Text(
-                        'No Boxes Found',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primaryDark),
-                      ),
+                      const Text('No Boxes Found',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold,
+                              color: AppColors.primaryDark)),
                       const SizedBox(height: 4),
-                      const Text(
-                        'Try searching for BOX-0001 or BOX-0002',
-                        style: TextStyle(fontSize: 12, color: AppColors.textBody),
-                      ),
+                      const Text('Try a different filter or search term',
+                          style: TextStyle(fontSize: 12, color: AppColors.textBody)),
                     ],
                   ),
                 ),
@@ -275,17 +248,18 @@ class _BoxesPageState extends State<BoxesPage> {
                 sliver: SliverList(
                   delegate: SliverChildBuilderDelegate(
                     (context, idx) {
-                      final box = displayBoxes[idx];
+                      final box = _boxes[idx];
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 12.0),
                         child: _buildBoxCard(box),
                       );
                     },
-                    childCount: displayBoxes.length,
+                    childCount: _boxes.length,
                   ),
                 ),
               ),
           ],
+        ),
         ),
       ),
     );
@@ -294,11 +268,7 @@ class _BoxesPageState extends State<BoxesPage> {
   Widget _buildFilterChip(String filter, String label) {
     final isActive = _activeFilter == filter;
     return GestureDetector(
-      onTap: () {
-        setState(() {
-          _activeFilter = filter;
-        });
-      },
+      onTap: () => _onFilterChanged(filter),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
