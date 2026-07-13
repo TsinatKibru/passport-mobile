@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'auth_provider.dart';
 import '../presentation/login_screen.dart';
-import '../presentation/home_screen.dart';
+import '../presentation/home/home_screen.dart';
 import '../presentation/scan_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
