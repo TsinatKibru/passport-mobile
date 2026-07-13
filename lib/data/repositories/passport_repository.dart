@@ -92,22 +92,17 @@ class PassportRepository extends BaseRepository {
     bool overrideLocation = false,
     required String action, // 'PASSPORT_ASSIGNED' | 'PASSPORT_RETURNED'
   }) async {
-    try {
-      await dio.post(
-        '/passports/batch-assign',
-        data: {
-          'passportIds': passportIds,
-          'boxId': boxId,
-          if (slotQrCode != null) 'slotQrCode': slotQrCode,
-          'overrideLocation': overrideLocation,
-          'action': action,
-        },
-      );
-      return true;
-    } catch (e) {
-      print('Error batch assigning passports: $e');
-      return false;
-    }
+    await dio.post(
+      '/passports/batch-assign',
+      data: {
+        'passportIds': passportIds,
+        'boxId': boxId,
+        if (slotQrCode != null) 'slotQrCode': slotQrCode,
+        'overrideLocation': overrideLocation,
+        'action': action,
+      },
+    );
+    return true;
   }
 
   /// POST /passports/:id/issue — issue passport to owner

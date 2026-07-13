@@ -5,8 +5,10 @@ import 'package:dio/dio.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/repositories/passport_repository.dart';
 import '../../../data/repositories/box_repository.dart';
+import '../../../data/repositories/location_repository.dart';
 import '../../../data/models/passport.dart';
 import '../../../data/models/box.dart' as models;
+import '../../../data/models/room.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/fingerprint_background.dart';
 
@@ -20,6 +22,7 @@ class PassportReturnPage extends StatefulWidget {
 class _PassportReturnPageState extends State<PassportReturnPage> {
   final PassportRepository _passportRepo = PassportRepository();
   final BoxRepository _boxRepo = BoxRepository();
+  final LocationRepository _locationRepo = LocationRepository();
 
   // Step state
   int _currentStep = 1; // 1: Scan Passports, 2: Select Box, 3: Verify & Confirm
@@ -40,13 +43,33 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
   bool _hasMoreBoxes = false;
   String _searchQuery = '';
   String? _selectedRoomId;
+  List<Room> _rooms = [];
+  bool _isLoadingRooms = false;
 
   // Verification state
   bool _isSubmitting = false;
   String? _scannedSlotQr;
+  String? _scannedBoxQr;
 
   // Track currently processing QR codes to prevent spam/duplicate API calls
   final Set<String> _processingQrs = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRooms();
+  }
+
+  Future<void> _loadRooms() async {
+    setState(() => _isLoadingRooms = true);
+    final rooms = await _locationRepo.getRooms();
+    if (mounted) {
+      setState(() {
+        _rooms = rooms;
+        _isLoadingRooms = false;
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -71,6 +94,14 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
       final passport = await _passportRepo.getByQr(code);
       if (passport == null) {
         _showFeedback('Passport not found in system: $code', true);
+        return;
+      }
+
+      if (!passport.isIssued) {
+        _showFeedback(
+          '${passport.holderName} is ${passport.status} — only ISSUED passports can be returned',
+          true,
+        );
         return;
       }
 
@@ -165,50 +196,185 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
     }
   }
 
-  void _submitReturn({bool overrideLocation = false}) async {
-    if (_selectedBox == null) return;
-
-    setState(() {
-      _isSubmitting = true;
-    });
+  Future<void> _executeBatchReturn({
+    required models.Box box,
+    bool overrideLocation = false,
+    void Function(models.Box box)? onSuccess,
+  }) async {
+    setState(() => _isSubmitting = true);
 
     try {
       final passportIds = _scannedPassports.map((p) => p.id).toList();
-      final res = await _passportRepo.batchAssign(
+      await _passportRepo.batchAssign(
         passportIds: passportIds,
-        boxId: _selectedBox!.id,
+        boxId: box.id,
         slotQrCode: _scannedSlotQr,
         overrideLocation: overrideLocation,
         action: 'PASSPORT_RETURNED',
       );
 
-      setState(() {
-        _isSubmitting = false;
-      });
+      if (!mounted) return;
+      setState(() => _isSubmitting = false);
 
-      if (res) {
-        _showSuccessDialog();
+      if (onSuccess != null) {
+        onSuccess(box);
       } else {
-        _showFeedback('Failed to process returns. Please check inputs.', true);
+        _showSuccessDialog();
       }
     } on DioException catch (dioErr) {
+      if (!mounted) return;
       setState(() => _isSubmitting = false);
-      final responseData = dioErr.response?.data;
-      if (responseData is Map && responseData['error'] == 'LOCATION_MISMATCH') {
-        _handleLocationMismatch(
-          currentLocation: responseData['currentLocation'] ?? 'Unknown',
-          scannedLocation: responseData['scannedLocation'] ?? 'Unknown',
-        );
-      } else {
-        _showFeedback(responseData?['message'] ?? 'Network submission error', true);
-      }
+      _handleBatchAssignError(
+        dioErr,
+        box: box,
+        onOverride: () => _executeBatchReturn(
+          box: box,
+          overrideLocation: true,
+          onSuccess: onSuccess,
+        ),
+      );
     } catch (e) {
+      if (!mounted) return;
       setState(() => _isSubmitting = false);
       _showFeedback('Return transaction failed: $e', true);
     }
   }
 
-  void _handleLocationMismatch({required String currentLocation, required String scannedLocation}) {
+  void _handleBatchAssignError(
+    DioException dioErr, {
+    required models.Box box,
+    required VoidCallback onOverride,
+  }) {
+    final responseData = dioErr.response?.data;
+    if (responseData is Map && responseData['error'] == 'LOCATION_MISMATCH') {
+      setState(() => _selectedBox = box);
+      _handleLocationMismatch(
+        currentLocation: responseData['currentLocation'] ?? 'Unknown',
+        scannedLocation: responseData['scannedLocation'] ?? 'Unknown',
+        onOverride: onOverride,
+      );
+      return;
+    }
+
+    final message = responseData is Map
+        ? (responseData['message'] as String? ?? 'Network submission error')
+        : 'Network submission error';
+    _showFeedback(message, true);
+  }
+
+  void _submitReturnWithVerification() async {
+    if (_selectedBox == null || _scannedBoxQr == null || _scannedSlotQr == null) return;
+
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    // Check if scanned box matches selected box
+    if (_scannedBoxQr != _selectedBox!.qrCode) {
+      setState(() => _isSubmitting = false);
+      _handleBoxMismatch();
+      return;
+    }
+
+    await _executeBatchReturn(box: _selectedBox!);
+  }
+
+  void _handleBoxMismatch() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: const [
+            Icon(Icons.warning_amber_rounded, color: AppColors.warning),
+            SizedBox(width: 8),
+            Text('Box Mismatch', style: TextStyle(fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('You selected: ${_selectedBox!.label}', 
+                 style: const TextStyle(fontWeight: FontWeight.bold)),
+            Text('Expected QR: ${_selectedBox!.qrCode}', 
+                 style: const TextStyle(fontSize: 12, color: AppColors.textBody)),
+            const SizedBox(height: 12),
+            Text('But scanned: $_scannedBoxQr', 
+                 style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.danger)),
+            const SizedBox(height: 16),
+            const Text('You have found a different box than selected. Please:',
+                       style: TextStyle(fontSize: 14)),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              setState(() {
+                _scannedBoxQr = null;
+                _scannedSlotQr = null;
+              });
+            },
+            child: const Text('Scan Again', style: TextStyle(color: AppColors.textBody)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _usePhysicalBox();
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+            child: const Text('Use This Box'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _usePhysicalBox() async {
+    // Find the box by scanned QR
+    setState(() => _isSubmitting = true);
+    
+    try {
+      final physicalBox = await _boxRepo.getByQr(_scannedBoxQr!);
+      
+      if (physicalBox == null) {
+        setState(() => _isSubmitting = false);
+        _showFeedback('Scanned box not found in system: $_scannedBoxQr', true);
+        return;
+      }
+
+      // Check capacity
+      final needed = _scannedPassports.length;
+      final available = physicalBox.capacity - physicalBox.occupiedCount;
+      
+      if (available < needed) {
+        setState(() => _isSubmitting = false);
+        _showFeedback(
+          'Box ${physicalBox.label} only has $available vacant slots, but you need $needed',
+          true,
+        );
+        return;
+      }
+
+      // Use the physical box for assignment
+      setState(() => _selectedBox = physicalBox);
+      await _executeBatchReturn(
+        box: physicalBox,
+        onSuccess: (box) => _showSuccessDialogWithBox(box),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isSubmitting = false);
+      _showFeedback('Failed to use physical box: $e', true);
+    }
+  }
+
+  void _handleLocationMismatch({
+    required String currentLocation,
+    required String scannedLocation,
+    required VoidCallback onOverride,
+  }) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -232,7 +398,7 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(ctx);
-              _submitReturn(overrideLocation: true);
+              onOverride();
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
             child: const Text('Update & Assign'),
@@ -251,6 +417,30 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
         title: const Text('Return Confirmed', style: TextStyle(fontWeight: FontWeight.bold)),
         content: Text(
           'Successfully returned ${_scannedPassports.length} passports to Box ${_selectedBox!.label}. All custody locations updated.',
+          textAlign: TextAlign.center,
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              context.pop(); // Go back to dashboard
+            },
+            child: const Text('Back to Dashboard'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSuccessDialogWithBox(models.Box box) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        icon: const Icon(Icons.check_circle_rounded, size: 54, color: AppColors.success),
+        title: const Text('Return Confirmed', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: Text(
+          'Successfully returned ${_scannedPassports.length} passports to Box ${box.label}. All custody locations updated.',
           textAlign: TextAlign.center,
         ),
         actions: [
@@ -495,6 +685,46 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
             style: const TextStyle(color: AppColors.textBody, fontSize: 12),
           ),
           const SizedBox(height: 16),
+
+          // Room filter
+          if (_isLoadingRooms)
+            const Padding(
+              padding: EdgeInsets.only(bottom: 8),
+              child: LinearProgressIndicator(minHeight: 2),
+            )
+          else if (_rooms.isNotEmpty)
+            Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String?>(
+                  isExpanded: true,
+                  value: _selectedRoomId,
+                  hint: const Text('All rooms', style: TextStyle(fontSize: 14)),
+                  items: [
+                    const DropdownMenuItem<String?>(
+                      value: null,
+                      child: Text('All rooms'),
+                    ),
+                    ..._rooms.map(
+                      (room) => DropdownMenuItem<String?>(
+                        value: room.id,
+                        child: Text(room.name),
+                      ),
+                    ),
+                  ],
+                  onChanged: (roomId) {
+                    setState(() => _selectedRoomId = roomId);
+                    _loadAvailableBoxes(resetPage: true);
+                  },
+                ),
+              ),
+            ),
           
           // Search input field
           Container(
@@ -677,60 +907,116 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
   }
 
   // --- STEP 3: Verify Location & Confirm ---
-  Widget _buildStep3() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Confirm & Verify Box Location',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.primaryDark),
-          ),
-          const SizedBox(height: 12),
-          GlassCard(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.inventory_2_rounded, color: AppColors.primary),
-                      const SizedBox(width: 8),
-                      Text(_selectedBox!.label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                      const Spacer(),
-                      Chip(
-                        label: Text('QR: ${_selectedBox!.qrCode}', style: const TextStyle(fontSize: 10)),
-                        padding: EdgeInsets.zero,
-                      ),
-                    ],
-                  ),
-                  const Divider(height: 20),
-                  Text('Target Slots Required: ${_scannedPassports.length}', style: const TextStyle(fontSize: 13)),
-                  const SizedBox(height: 6),
-                  Text('Box Current Slot: ${_selectedBox!.slot?.name ?? "No Slot Assigned"}', style: const TextStyle(fontSize: 13)),
-                  const SizedBox(height: 6),
-                  Text('Physical Location Address:\n${_selectedBox!.location ?? "Unassigned"}',
-                      style: const TextStyle(fontSize: 13, color: AppColors.textBody, height: 1.3)),
-                ],
-              ),
+  // --- STEP 3: Verify Box Identity & Location ---
+// --- STEP 3: Verify Box Identity & Location ---
+Widget _buildStep3() {
+  return SingleChildScrollView(
+    padding: const EdgeInsets.all(20.0),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Verify Box & Location',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.primaryDark),
+        ),
+        const Text(
+          'Scan both box and slot QR codes to verify identity and location',
+          style: TextStyle(fontSize: 12, color: AppColors.textBody),
+        ),
+        const SizedBox(height: 12),
+        
+        // Selected Box Info Card
+        GlassCard(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.inventory_2_rounded, color: AppColors.primary),
+                    const SizedBox(width: 8),
+                    Text('Selected: ${_selectedBox!.label}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    const Spacer(),
+                    Chip(
+                      label: Text('${_scannedPassports.length} passports', style: const TextStyle(fontSize: 10)),
+                      padding: EdgeInsets.zero,
+                    ),
+                  ],
+                ),
+                const Divider(height: 16),
+                Text('Expected Location: ${_selectedBox!.location ?? "Unassigned"}', 
+                     style: const TextStyle(fontSize: 13, color: AppColors.textBody)),
+              ],
             ),
           ),
+        ),
+        const SizedBox(height: 24),
+        
+        // Step 1: Scan Box QR
+        const Text(
+          '1. Scan Physical Box QR Code',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.primaryDark),
+        ),
+        const Text(
+          'First, scan the QR code on the physical box to verify its identity',
+          style: TextStyle(fontSize: 12, color: AppColors.textBody),
+        ),
+        const SizedBox(height: 12),
+        
+        ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            height: 160,
+            width: double.infinity,
+            color: Colors.black12,
+            child: _scannedBoxQr != null
+                ? Container(
+                    color: AppColors.success.withOpacity(0.08),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.check_circle, color: AppColors.success, size: 36),
+                        const SizedBox(height: 8),
+                        Text('Box: $_scannedBoxQr', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                        TextButton(
+                          onPressed: () => setState(() => _scannedBoxQr = null),
+                          child: const Text('Scan Different Box', style: TextStyle(fontSize: 11)),
+                        ),
+                      ],
+                    ),
+                  )
+                : MobileScanner(
+                    onDetect: (capture) {
+                      final barcode = capture.barcodes.firstOrNull;
+                      if (barcode?.rawValue != null) {
+                        setState(() {
+                          _scannedBoxQr = barcode!.rawValue;
+                        });
+                      }
+                    },
+                  ),
+          ),
+        ),
+        
+        if (_scannedBoxQr != null) ...[
           const SizedBox(height: 24),
+          
+          // Step 2: Scan Slot QR  
           const Text(
-            'Scan Slot QR Code at Physical Location',
+            '2. Scan Physical Slot QR Code',
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.primaryDark),
           ),
           const Text(
-            'Align and scan the QR code of the slot shelf to verify the box is correctly positioned.',
+            'Now scan the QR code of the slot where the box is located',
             style: TextStyle(fontSize: 12, color: AppColors.textBody),
           ),
           const SizedBox(height: 12),
+          
           ClipRRect(
             borderRadius: BorderRadius.circular(16),
             child: Container(
-              height: 200,
+              height: 160,
               width: double.infinity,
               color: Colors.black12,
               child: _scannedSlotQr != null
@@ -739,12 +1025,12 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.check_circle, color: AppColors.success, size: 48),
-                          const SizedBox(height: 12),
-                          Text('Scanned Slot QR: $_scannedSlotQr', style: const TextStyle(fontWeight: FontWeight.bold)),
+                          const Icon(Icons.check_circle, color: AppColors.success, size: 36),
+                          const SizedBox(height: 8),
+                          Text('Slot: $_scannedSlotQr', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                           TextButton(
                             onPressed: () => setState(() => _scannedSlotQr = null),
-                            child: const Text('Scan Different Slot'),
+                            child: const Text('Scan Different Slot', style: TextStyle(fontSize: 11)),
                           ),
                         ],
                       ),
@@ -761,15 +1047,21 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
                     ),
             ),
           ),
-          const SizedBox(height: 24),
-          _isSubmitting
-              ? const Center(child: CircularProgressIndicator())
-              : ElevatedButton(
-                  onPressed: _scannedSlotQr == null ? null : () => _submitReturn(overrideLocation: false),
-                  child: const Text('Verify & Finalize Return'),
-                ),
         ],
-      ),
-    );
-  }
+        
+        const SizedBox(height: 24),
+        
+        // Submit Button
+        _isSubmitting
+            ? const Center(child: CircularProgressIndicator())
+            : ElevatedButton(
+                onPressed: _scannedBoxQr == null || _scannedSlotQr == null 
+                    ? null 
+                    : () => _submitReturnWithVerification(),
+                child: const Text('Verify & Complete Return'),
+              ),
+      ],
+    ),
+  );
+}
 }

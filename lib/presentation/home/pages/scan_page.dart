@@ -1,6 +1,8 @@
 import 'dart:math' as math;
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/repositories/passport_repository.dart';
@@ -134,6 +136,12 @@ class _ScanPageState extends ConsumerState<ScanPage> with SingleTickerProviderSt
           if (passport == null) {
             _showFeedback('Passport not found: $code', true);
             hasError = true;
+          } else if (!passport.isIssued) {
+            _showFeedback(
+              '${passport.holderName} is ${passport.status} — only ISSUED passports can be assigned',
+              true,
+            );
+            hasError = true;
           } else {
             setState(() {
               _scannedPassports.add(passport);
@@ -148,36 +156,17 @@ class _ScanPageState extends ConsumerState<ScanPage> with SingleTickerProviderSt
             _showFeedback('Passport: ${passport.holderName} added.', false);
           }
         }
-      } else if (_activeMode == 'return') {
-        // Return passport
-        if (_scannedBox == null) {
-          final box = await _boxRepo.getByQr(code);
-          if (box == null) {
-            _showFeedback('Box not found: $code', true);
-            hasError = true;
-          } else {
-            setState(() {
-              _scannedBox = box;
-            });
-            _showFeedback('Return box ${box.label} locked.', false);
-          }
-        } else {
-          final passport = await _passportRepo.getByQr(code);
-          if (passport == null) {
-            _showFeedback('Passport not found: $code', true);
-            hasError = true;
-          } else {
-            setState(() {
-              _scannedPassports.add(passport);
-            });
-            _showFeedback('Passport ${passport.holderName} read.', false);
-          }
-        }
       } else if (_activeMode == 'issue') {
         // Issue passport to holder
         final passport = await _passportRepo.getByQr(code);
         if (passport == null) {
           _showFeedback('Passport not found: $code', true);
+          hasError = true;
+        } else if (!passport.isInBox) {
+          _showFeedback(
+            '${passport.holderName} is ${passport.status} — only IN_BOX passports can be issued',
+            true,
+          );
           hasError = true;
         } else {
           setState(() {
@@ -322,18 +311,18 @@ class _ScanPageState extends ConsumerState<ScanPage> with SingleTickerProviderSt
     final passportIds = _scannedPassports.map((p) => p.id).toList();
     
     try {
-      final success = await _passportRepo.batchAssign(
+      await _passportRepo.batchAssign(
         passportIds: passportIds,
         boxId: _scannedBox!.id,
-        action: _activeMode == 'return' ? 'PASSPORT_RETURNED' : 'PASSPORT_ASSIGNED',
+        action: 'PASSPORT_ASSIGNED',
       );
       
-      if (success) {
-        _showFeedback('Successfully stored ${passportIds.length} passports in ${_scannedBox!.label}', false);
-        _resetCurrentScan();
-      } else {
-        _showFeedback('Batch operation failed', true);
-      }
+      _showFeedback('Successfully stored ${passportIds.length} passports in ${_scannedBox!.label}', false);
+      _resetCurrentScan();
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      final message = data is Map ? (data['message'] as String? ?? 'Batch operation failed') : 'Batch operation failed';
+      _showFeedback(message, true);
     } catch (e) {
       _showFeedback('Error submitting batch: $e', true);
     } finally {
@@ -682,6 +671,10 @@ class _ScanPageState extends ConsumerState<ScanPage> with SingleTickerProviderSt
     final isActive = _activeMode == mode;
     return GestureDetector(
       onTap: () {
+        if (mode == 'return') {
+          context.push('/scan?mode=return');
+          return;
+        }
         setState(() {
           _activeMode = mode;
           _resetCurrentScan();

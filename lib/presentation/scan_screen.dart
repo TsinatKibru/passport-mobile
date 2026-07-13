@@ -75,6 +75,12 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
             _showError('Passport not found: $code');
             return;
           }
+          if (!passport.isIssued) {
+            _showError(
+              '${passport.holderName} is ${passport.status} — only ISSUED passports can be assigned',
+            );
+            return;
+          }
           setState(() {
             _scannedPassports.add(passport);
           });
