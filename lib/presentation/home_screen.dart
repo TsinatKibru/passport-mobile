@@ -19,8 +19,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget build(BuildContext context) {
     final List<Widget> pages = [
       const DashboardPage(),
+      const Center(child: Text('Boxes')),
       const ScanPage(),
-      const HistoryPage(),
+      const Center(child: Text('Tasks')),
       const ProfilePage(),
     ];
 
@@ -34,41 +35,61 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           color: Colors.white,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, -2),
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 12,
+              offset: const Offset(0, -4),
             ),
           ],
         ),
         child: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 _NavBarItem(
-                  icon: Icons.dashboard_rounded,
-                  label: 'Dashboard',
+                  icon: Icons.home_rounded,
+                  label: 'Home',
                   isSelected: _selectedIndex == 0,
                   onTap: () => setState(() => _selectedIndex = 0),
                 ),
                 _NavBarItem(
-                  icon: Icons.qr_code_scanner_rounded,
-                  label: 'Scan',
+                  icon: Icons.inventory_2_outlined,
+                  label: 'Boxes',
                   isSelected: _selectedIndex == 1,
                   onTap: () => setState(() => _selectedIndex = 1),
                 ),
-                _NavBarItem(
-                  icon: Icons.history_rounded,
-                  label: 'History',
-                  isSelected: _selectedIndex == 2,
-                  onTap: () => setState(() => _selectedIndex = 2),
+                // Center Scan button
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primary.withOpacity(0.3),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: IconButton(
+                    icon: const Icon(Icons.qr_code_scanner_rounded, color: Colors.white, size: 28),
+                    onPressed: () => setState(() => _selectedIndex = 2),
+                  ),
                 ),
                 _NavBarItem(
-                  icon: Icons.person_rounded,
-                  label: 'Profile',
+                  icon: Icons.assignment_outlined,
+                  label: 'Tasks',
                   isSelected: _selectedIndex == 3,
                   onTap: () => setState(() => _selectedIndex = 3),
+                ),
+                _NavBarItem(
+                  icon: Icons.menu_rounded,
+                  label: 'More',
+                  isSelected: _selectedIndex == 4,
+                  onTap: () => setState(() => _selectedIndex = 4),
                 ),
               ],
             ),
@@ -97,31 +118,24 @@ class _NavBarItem extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary.withOpacity(0.1) : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              color: isSelected ? AppColors.primary : AppColors.onSurfaceVariant,
-              size: 24,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            color: isSelected ? AppColors.primary : AppColors.onSurfaceVariant.withOpacity(0.6),
+            size: 24,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              color: isSelected ? AppColors.primary : AppColors.onSurfaceVariant.withOpacity(0.6),
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
             ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: AppTextStyles.labelSmall.copyWith(
-                color: isSelected ? AppColors.primary : AppColors.onSurfaceVariant,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -138,223 +152,265 @@ class DashboardPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(authProvider).user;
     final statsAsync = ref.watch(dashboardStatsProvider);
+    final now = DateTime.now();
+    final greeting = _getGreeting();
+    final dateStr = _formatDate(now);
 
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: AppColors.primary,
+        elevation: 0,
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: const Icon(Icons.menu_rounded, color: Colors.white),
+            onPressed: () {
+              // TODO: Open drawer/menu
+            },
+          ),
+        ),
+        title: const Text(
+          'Dashboard',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        centerTitle: true,
+        actions: [
+          Stack(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.notifications_outlined, color: Colors.white),
+                onPressed: () {
+                  // TODO: Open notifications
+                },
+              ),
+              Positioned(
+                right: 10,
+                top: 10,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: const BoxDecoration(
+                    color: AppColors.danger,
+                    shape: BoxShape.circle,
+                  ),
+                  constraints: const BoxConstraints(
+                    minWidth: 16,
+                    minHeight: 16,
+                  ),
+                  child: const Center(
+                    child: Text(
+                      '3',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(dashboardStatsProvider);
         },
-        child: CustomScrollView(
-          slivers: [
-            // Header
-            SliverToBoxAdapter(
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      AppColors.primary,
-                      AppColors.primary.withOpacity(0.8),
-                    ],
-                  ),
-                  borderRadius: const BorderRadius.only(
-                    bottomLeft: Radius.circular(32),
-                    bottomRight: Radius.circular(32),
-                  ),
-                ),
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Welcome back,',
-                              style: AppTextStyles.bodyMedium.copyWith(
-                                color: Colors.white70,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              user?.name ?? 'Staff User',
-                              style: AppTextStyles.titleLarge.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ),
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Icon(
-                            Icons.notifications_rounded,
-                            color: Colors.white,
-                            size: 24,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            // Greeting Section
+            Text(
+              '$greeting, ${user?.name?.split(' ').first ?? 'User'} 👋',
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
               ),
             ),
+            const SizedBox(height: 6),
+            
+            Row(
+              children: [
+                const Icon(
+                  Icons.calendar_today_rounded,
+                  size: 14,
+                  color: AppColors.textBody,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  dateStr,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textBody,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
 
             // Stats Cards
-            SliverPadding(
-              padding: const EdgeInsets.all(16),
-              sliver: statsAsync.when(
-                data: (stats) {
-                  if (stats == null) {
-                    return SliverToBoxAdapter(
-                      child: Center(
-                        child: Text(
-                          'Unable to load statistics',
-                          style: AppTextStyles.bodyMedium.copyWith(
-                            color: AppColors.onSurfaceVariant,
-                          ),
-                        ),
-                      ),
-                    );
-                  }
-                  return SliverGrid(
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
-                      childAspectRatio: 1.4,
-                    ),
-                    delegate: SliverChildListDelegate([
-                      _StatCard(
-                        title: 'Total Passports',
-                        value: _formatNumber(stats.totalPassports),
-                        icon: Icons.description_rounded,
-                        color: AppColors.primary,
-                        trend: stats.passportTrend,
-                      ),
-                      _StatCard(
-                        title: 'In Storage',
-                        value: _formatNumber(stats.inBox),
-                        icon: Icons.inventory_2_rounded,
-                        color: AppColors.success,
-                        trend: stats.inBoxTrend,
-                      ),
-                      _StatCard(
-                        title: 'Issued',
-                        value: _formatNumber(stats.issued),
-                        icon: Icons.check_circle_rounded,
-                        color: AppColors.warning,
-                        trend: stats.issuedTrend,
-                      ),
-                      _StatCard(
-                        title: 'Active Boxes',
-                        value: _formatNumber(stats.activeBoxes),
-                        icon: Icons.archive_rounded,
-                        color: const Color(0xFF8B5CF6),
-                        trend: stats.boxesTrend,
-                      ),
-                    ]),
-                  );
-                },
-                loading: () => SliverGrid(
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                    childAspectRatio: 1.4,
-                  ),
-                  delegate: SliverChildListDelegate([
-                    _StatCardLoading(),
-                    _StatCardLoading(),
-                    _StatCardLoading(),
-                    _StatCardLoading(),
-                  ]),
-                ),
-                error: (err, stack) => SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
+            statsAsync.when(
+              data: (stats) {
+                if (stats == null) {
+                  return Center(
                     child: Text(
-                      'Error loading stats: $err',
+                      'Unable to load statistics',
                       style: AppTextStyles.bodyMedium.copyWith(
-                        color: AppColors.danger,
+                        color: AppColors.onSurfaceVariant,
                       ),
                     ),
+                  );
+                }
+                return GridView.count(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  childAspectRatio: 1.3,
+                  children: [
+                    _StatCard(
+                      title: 'Total Boxes',
+                      subtitle: 'All registered',
+                      value: stats.totalPassports.toString(),
+                      icon: Icons.inventory_2_rounded,
+                      iconColor: AppColors.primary,
+                      iconBgColor: const Color(0xFFE3F2FD),
+                    ),
+                    _StatCard(
+                      title: 'Occupied Boxes',
+                      subtitle: 'In use',
+                      value: stats.inBox.toString(),
+                      icon: Icons.check_circle_rounded,
+                      iconColor: AppColors.success,
+                      iconBgColor: const Color(0xFFE8F5E9),
+                    ),
+                    _StatCard(
+                      title: 'Vacant Boxes',
+                      subtitle: 'Available',
+                      value: (stats.totalPassports - stats.inBox).toString(),
+                      icon: Icons.warning_amber_rounded,
+                      iconColor: AppColors.warning,
+                      iconBgColor: const Color(0xFFFFF9C4),
+                    ),
+                    _StatCard(
+                      title: 'Occupancy Rate',
+                      subtitle: 'Overall',
+                      value: stats.totalPassports > 0
+                          ? '${((stats.inBox / stats.totalPassports) * 100).toStringAsFixed(1)}%'
+                          : '0%',
+                      icon: Icons.trending_up_rounded,
+                      iconColor: const Color(0xFFE91E63),
+                      iconBgColor: const Color(0xFFFCE4EC),
+                    ),
+                  ],
+                );
+              },
+              loading: () => GridView.count(
+                crossAxisCount: 2,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                childAspectRatio: 1.3,
+                children: [
+                  _StatCardLoading(),
+                  _StatCardLoading(),
+                  _StatCardLoading(),
+                  _StatCardLoading(),
+                ],
+              ),
+              error: (err, stack) => Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  'Error loading stats: $err',
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.danger,
                   ),
                 ),
               ),
             ),
 
-            // Quick Actions
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Quick Actions',
-                      style: AppTextStyles.titleMedium,
-                    ),
-                    const SizedBox(height: 12),
-                  ],
-                ),
+            const SizedBox(height: 28),
+
+            // Quick Actions Header
+            const Text(
+              'Quick Actions',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
               ),
             ),
+            const SizedBox(height: 16),
 
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              sliver: SliverToBoxAdapter(
-                child: Column(
-                  children: [
-                    _QuickActionCard(
-                      title: 'Scan Passport QR',
-                      subtitle: 'Issue or return passports',
-                      icon: Icons.qr_code_scanner_rounded,
-                      color: AppColors.primary,
-                      onTap: () => context.push('/scan?mode=passport'),
-                    ),
-                    const SizedBox(height: 12),
-                    _QuickActionCard(
-                      title: 'Scan Box QR',
-                      subtitle: 'View box details and contents',
-                      icon: Icons.inbox_rounded,
-                      color: AppColors.success,
-                      onTap: () => context.push('/scan?mode=box'),
-                    ),
-                    const SizedBox(height: 12),
-                    _QuickActionCard(
-                      title: 'Move Box',
-                      subtitle: 'Relocate box to different slot',
-                      icon: Icons.swap_horiz_rounded,
-                      color: AppColors.warning,
-                      onTap: () => context.push('/scan?mode=move'),
-                    ),
-                  ],
+            // Quick Actions Grid
+            GridView.count(
+              crossAxisCount: 2,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              childAspectRatio: 2.8,
+              children: [
+                _QuickActionButton(
+                  title: 'Issue Passport',
+                  icon: Icons.view_module_rounded,
+                  iconColor: AppColors.primary,
+                  iconBgColor: const Color(0xFFE3F2FD),
+                  onTap: () => context.push('/scan?mode=passport'),
                 ),
-              ),
+                _QuickActionButton(
+                  title: 'Return Passport',
+                  icon: Icons.receipt_long_rounded,
+                  iconColor: AppColors.success,
+                  iconBgColor: const Color(0xFFE8F5E9),
+                  onTap: () => context.push('/scan?mode=return'),
+                ),
+                _QuickActionButton(
+                  title: 'Assign Box',
+                  icon: Icons.crop_square_rounded,
+                  iconColor: AppColors.warning,
+                  iconBgColor: const Color(0xFFFFF9C4),
+                  onTap: () => context.push('/scan?mode=box'),
+                ),
+                _QuickActionButton(
+                  title: 'Search Applicant',
+                  icon: Icons.search_rounded,
+                  iconColor: const Color(0xFF9C27B0),
+                  iconBgColor: const Color(0xFFF3E5F5),
+                  onTap: () {
+                    // TODO: Navigate to search
+                  },
+                ),
+              ],
             ),
 
-            const SliverToBoxAdapter(child: SizedBox(height: 24)),
+            const SizedBox(height: 24),
           ],
         ),
       ),
     );
   }
 
-  String _formatNumber(int number) {
-    if (number >= 1000) {
-      return '${(number / 1000).toStringAsFixed(1)}K';
-    }
-    return number.toString();
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  }
+
+  String _formatDate(DateTime date) {
+    const months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
 }
 
@@ -416,101 +472,168 @@ class _StatCardLoading extends StatelessWidget {
 
 class _StatCard extends StatelessWidget {
   final String title;
+  final String subtitle;
   final String value;
   final IconData icon;
-  final Color color;
-  final String trend;
+  final Color iconColor;
+  final Color iconBgColor;
 
   const _StatCard({
     required this.title,
+    required this.subtitle,
     required this.value,
     required this.icon,
-    required this.color,
-    required this.trend,
+    required this.iconColor,
+    required this.iconBgColor,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withOpacity(0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(icon, color: color, size: 20),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: Stack(
+          children: [
+            // Wavy background decoration - fills entire card behind content
+            Positioned.fill(
+              child: CustomPaint(
+                painter: _WavePainter(color: iconBgColor),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: AppColors.success.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  trend,
-                  style: AppTextStyles.labelSmall.copyWith(
-                    color: AppColors.success,
-                    fontWeight: FontWeight.w600,
+            ),
+            // Content - Icon on left, text on right
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: iconBgColor,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    icon,
+                    color: iconColor,
+                    size: 22,
                   ),
                 ),
-              ),
-            ],
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                value,
-                style: AppTextStyles.displayMedium.copyWith(
-                  fontWeight: FontWeight.w700,
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: [
+                      Text(
+                        value,
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      Text(
+                        subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                title,
-                style: AppTextStyles.labelSmall.copyWith(
-                  color: AppColors.onSurfaceVariant,
-                ),
-              ),
-            ],
-          ),
-        ],
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-class _QuickActionCard extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final IconData icon;
+// Wave painter for stat card background decoration - water in glass style
+class _WavePainter extends CustomPainter {
   final Color color;
+
+  _WavePainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color.withOpacity(0.6)
+      ..style = PaintingStyle.fill;
+
+    final path = Path();
+    
+    // Start from bottom left corner (sharp edge touching glass)
+    path.moveTo(0, size.height);
+    path.lineTo(0, size.height * 0.5);
+    
+    // Gentle curve down
+    path.quadraticBezierTo(
+      size.width * 0.15, size.height * 0.55,
+      size.width * 0.3, size.height * 0.6,
+    );
+    
+    // Small bump up in middle
+    path.quadraticBezierTo(
+      size.width * 0.5, size.height * 0.45,
+      size.width * 0.7, size.height * 0.6,
+    );
+    
+    // Curve to right edge
+    path.quadraticBezierTo(
+      size.width * 0.85, size.height * 0.55,
+      size.width, size.height * 0.5,
+    );
+    
+    // Sharp edge at bottom right corner
+    path.lineTo(size.width, size.height);
+    
+    path.close();
+
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _QuickActionButton extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final Color iconColor;
+  final Color iconBgColor;
   final VoidCallback onTap;
 
-  const _QuickActionCard({
+  const _QuickActionButton({
     required this.title,
-    required this.subtitle,
     required this.icon,
-    required this.color,
+    required this.iconColor,
+    required this.iconBgColor,
     required this.onTap,
   });
 
@@ -518,46 +641,43 @@ class _QuickActionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(12),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         child: Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.border),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
+                  color: iconBgColor,
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(icon, color: color, size: 24),
+                child: Icon(icon, color: iconColor, size: 20),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 8),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, style: AppTextStyles.titleMedium),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: AppTextStyles.bodyMedium.copyWith(
-                        color: AppColors.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
                 ),
-              ),
-              Icon(
-                Icons.arrow_forward_ios_rounded,
-                color: AppColors.onSurfaceVariant,
-                size: 16,
               ),
             ],
           ),
