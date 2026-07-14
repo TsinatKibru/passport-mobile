@@ -1,5 +1,3 @@
-
-
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -15,38 +13,14 @@ import '../../../data/models/room.dart';
 import '../widgets/fingerprint_background.dart';
 
 /// CENTRAL CONSTANTS - Single source of truth for all magic numbers
-/// This prevents scattered hardcoded values and makes tuning easy
 class _Constants {
-  // SCAN TIMING (Step 1)
-  /// Debounce delay for barcode detection (prevents rapid duplicate processing)
-  /// MobileScanner fires on EVERY FRAME, so debouncing is critical
   static const int scanDebounceMs = 800;
-
-  // FEEDBACK TIMING (Global)
-  /// Throttle delay for snackbar display (prevents spam when scanning continuously)
-  /// FIX: This was the main issue - snackbars showed every frame without throttling
   static const int feedbackThrottleMs = 500;
-
-  /// How long to keep a QR code in "detected" set before allowing re-scan
-  /// (gives user time to move camera away before code triggers again)
   static const int processingQrExpiryMs = 2000;
-
-  // SEARCH TIMING (Step 2)
-  /// Debounce delay for search input (prevents excessive API calls while typing)
   static const int searchDebounceMs = 500;
-
-  // PAGINATION (Step 2)
-  /// Items per page when loading available boxes
-  static const int boxPaginationLimit = 20;
-
-  // UI DIMENSIONS
-  /// Width of the QR scan reticle overlay
+  static const int boxPaginationLimit = 15;
   static const double scanReticleWidth = 220;
-  /// Height of the QR scan reticle overlay
   static const double scanReticleHeight = 140;
-
-  // LABELS
-  /// Step names for the progress indicator
   static const List<String> stepLabels = ['Scan', 'Select Box', 'Scan Box', 'Scan Slot'];
 }
 
@@ -58,44 +32,27 @@ class PassportReturnPage extends StatefulWidget {
 }
 
 class _PassportReturnPageState extends State<PassportReturnPage> {
-  // ============================================================================
-  // REPOSITORIES
-  // ============================================================================
+  // Repositories
   final PassportRepository _passportRepo = PassportRepository();
   final BoxRepository _boxRepo = BoxRepository();
   final LocationRepository _locationRepo = LocationRepository();
 
-  // ============================================================================
-  // STEP & UI STATE
-  // ============================================================================
+  // Step and global status
   int _currentStep = 1;
+  bool _isSubmitting = false;
 
-  // ============================================================================
-  // SCAN STATE (Step 1) - Passport QR Detection
-  // ============================================================================
+  // Step 1: Passport Scan Stack
   final List<Passport> _scannedPassports = [];
-
-  /// FIX #1: Prevents duplicate barcode processing in the same scan session.
-  /// MobileScanner fires onDetect on EVERY FRAME while a barcode is visible,
-  /// so we track detected codes to ignore repeated detections of the same QR.
-  /// This set is cleared after 2 seconds to allow re-scanning if needed.
   final Set<String> _detectedBarcodes = {};
-
-  /// FIX #2: CRITICAL - Throttles snackbar display to prevent spam.
-  /// When you hold camera steady on a barcode, MobileScanner fires every frame.
-  /// Without throttling, snackbar appears dozens of times per second.
-  /// We only show a snackbar if 500ms has passed since the last one.
+  final Set<String> _failedQrs = {};
   DateTime? _lastFeedbackTime;
+  Timer? _scanDebounceTimer;
 
-  // ============================================================================
-  // BOX SELECTION STATE (Step 2) - Box Search & Selection
-  // ============================================================================
+  // Step 2: Box Selection & Pagination
   List<models.Box> _availableBoxes = [];
   models.Box? _selectedBox;
   bool _isLoadingBoxes = false;
   final TextEditingController _boxSearchController = TextEditingController();
-
-  // Pagination state
   int _currentPage = 1;
   int _totalPages = 1;
   int _totalBoxes = 0;
@@ -104,30 +61,18 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
   String? _selectedRoomId;
   List<Room> _rooms = [];
   bool _isLoadingRooms = false;
-
-  // ============================================================================
-  // VERIFICATION STATE (Steps 3 & 4) - Box & Slot QR Verification
-  // ============================================================================
-  bool _isSubmitting = false;
-  String? _scannedSlotQr;
-  String? _scannedBoxQr;
-  String? _mismatchMessage;
-
-  // ============================================================================
-  // DEBOUNCE/THROTTLE TIMERS - Prevent rapid processing
-  // ============================================================================
-  /// FIX #3: Debounces barcode detection (800ms)
-  /// Without this, rapid frame detection causes duplicate API calls
-  Timer? _scanDebounceTimer;
-
-  /// FIX #4: Debounces search input (500ms)
-  /// Prevents excessive API calls while user is still typing
   Timer? _searchDebounceTimer;
 
-  // ============================================================================
-  // CONTROLLERS & SCROLL
-  // ============================================================================
+  // Steps 3 & 4: Two-Step Physical Custody Verification
+  String? _scannedBoxQr;
+  String? _scannedSlotQr;
+  String? _mismatchMessage;
+  bool _isLoadingValidation = false;
+  Map<String, dynamic>? _validationResponse;
+  bool _overrideLocation = false;
+
   final ScrollController _step3ScrollController = ScrollController();
+  final ScrollController _step4ScrollController = ScrollController();
 
   @override
   void initState() {
@@ -139,43 +84,19 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
   void dispose() {
     _boxSearchController.dispose();
     _step3ScrollController.dispose();
-    
-    // FIX: Cancel all pending timers to prevent orphaned callbacks
-    // If these fire after dispose, it could crash the app or leak memory
+    _step4ScrollController.dispose();
     _searchDebounceTimer?.cancel();
     _scanDebounceTimer?.cancel();
-    
     super.dispose();
   }
 
-  // ============================================================================
-  // FEEDBACK & UX METHODS
-  // ============================================================================
-
-  /// FIX #2: Throttled snackbar to prevent spam.
-  ///
-  /// PROBLEM: When holding camera on a barcode, MobileScanner fires onDetect
-  /// every frame (~60 fps). Without throttling, snackbars appear dozens of times.
-  ///
-  /// SOLUTION: Only show snackbar if 500ms has elapsed since the last one.
-  /// This ensures smooth UX while preventing spam.
-  ///
-  /// Example:
-  /// - Frame 1 (0ms): shows snackbar, sets _lastFeedbackTime = now
-  /// - Frame 2 (16ms): suppressed (16 < 500)
-  /// - Frame 3 (32ms): suppressed (32 < 500)
-  /// - ...
-  /// - Frame N (500ms+): shows snackbar
+  // Feedback display helper
   void _showFeedback(String message, bool isError) {
     final now = DateTime.now();
-    
-    // Check if we've shown a snackbar recently
     if (_lastFeedbackTime != null &&
         now.difference(_lastFeedbackTime!).inMilliseconds < _Constants.feedbackThrottleMs) {
-      return; // Suppress this feedback - too soon after last one
+      return;
     }
-
-    // Update the timestamp for next throttle check
     _lastFeedbackTime = now;
 
     if (!mounted) return;
@@ -189,13 +110,14 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
     );
   }
 
-  /// Raise mismatch: show in banner + snackbar + scroll to top
   void _raiseMismatch(String message) {
     if (!mounted) return;
     setState(() => _mismatchMessage = message);
     _showFeedback(message, true);
-    if (_step3ScrollController.hasClients) {
+    if (_currentStep == 3 && _step3ScrollController.hasClients) {
       _step3ScrollController.animateTo(0, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
+    } else if (_currentStep == 4 && _step4ScrollController.hasClients) {
+      _step4ScrollController.animateTo(0, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
     }
   }
 
@@ -205,17 +127,19 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
     }
   }
 
-  // === STEP NAVIGATION ===
-
   void _goToStep(int step) {
     if (!mounted) return;
     setState(() {
       _currentStep = step;
       _clearMismatch();
-
-      // Clean up scanned data when moving backwards
-      if (step < 4) _scannedSlotQr = null;
-      if (step < 3) _scannedBoxQr = null;
+      if (step < 4) {
+        _scannedSlotQr = null;
+        _validationResponse = null;
+        _overrideLocation = false;
+      }
+      if (step < 3) {
+        _scannedBoxQr = null;
+      }
     });
   }
 
@@ -226,8 +150,6 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
       context.pop();
     }
   }
-
-  // === ROOM LOADING ===
 
   Future<void> _loadRooms() async {
     if (!mounted) return;
@@ -249,38 +171,14 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
   }
 
   // ============================================================================
-  // PASSPORT SCANNING (Step 1) - QR Code Detection & Processing
+  // STEP 1: SCAN PASSPORTS
   // ============================================================================
-
-  /// FIX #1 & #3: Debounced barcode detection handler.
-  ///
-  /// PROBLEM: MobileScanner fires onDetect on EVERY FRAME (~60fps) while a
-  /// barcode is visible. This would cause:
-  /// 1. Duplicate API calls (looking up same passport repeatedly)
-  /// 2. Snackbar spam (hundreds of "Added" messages per second)
-  ///
-  /// SOLUTION: Two-layer protection:
-  /// 1. _detectedBarcodes set: If code is already detected, ignore it immediately
-  /// 2. Debounce timer: Even if new code, wait 800ms before processing
-  ///
-  /// Flow:
-  /// - Frame 1 (0ms): Code detected → _onBarcode called
-  ///   → Code not in _detectedBarcodes, so set 800ms timer
-  /// - Frame 2 (16ms): Code detected again → _onBarcode called
-  ///   → Code not yet in _detectedBarcodes (added after processing)
-  ///   → Cancel old timer, set new 800ms timer (resets the clock)
-  /// - Frames 3-48: Same thing (timer keeps resetting)
-  /// - After no new detections for 800ms: Timer fires → _addPassportByQr called
   void _onBarcode(String code) {
-    // Ignore if already processed and added to stack
-    if (_detectedBarcodes.contains(code)) {
+    if (_detectedBarcodes.contains(code) || _failedQrs.contains(code)) {
       return;
     }
 
-    // Cancel any pending timer from a previous scan
     _scanDebounceTimer?.cancel();
-    
-    // Set new debounce timer - only process after 800ms of stable detection
     _scanDebounceTimer = Timer(
       const Duration(milliseconds: _Constants.scanDebounceMs),
       () {
@@ -291,44 +189,37 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
     );
   }
 
-  /// Adds a scanned passport to the list after API lookup.
-  /// Called by debounce timer in _onBarcode.
   Future<void> _addPassportByQr(String code) async {
-    // Quick check: already in the scanned stack?
-    if (_scannedPassports.any((p) => p.qrCode == code)) {
+    if (_scannedPassports.any((p) => p.qrCode == code) || _failedQrs.contains(code)) {
       return;
     }
 
-    // Mark this code as detected (prevents duplicate processing)
     _detectedBarcodes.add(code);
 
     try {
-      // Look up passport from API
       final passport = await _passportRepo.getByQr(code);
       if (passport == null) {
+        _failedQrs.add(code);
         _showFeedback('Passport not found: $code', true);
         return;
       }
 
-      // Validate passport is in ISSUED status
       if (!passport.isIssued) {
+        _failedQrs.add(code);
         _showFeedback(
-          '${passport.holderName} is ${passport.status} — only ISSUED passports can be returned',
+          '${passport.holderName} is currently ${passport.status} — only ISSUED passports can be returned',
           true,
         );
         return;
       }
 
-      // Add to scanned stack
       if (!mounted) return;
       setState(() => _scannedPassports.add(passport));
       _showFeedback('Added: ${passport.holderName}', false);
     } catch (e) {
-      _showFeedback('Error: $e', true);
+      _failedQrs.add(code);
+      _showFeedback('Error looking up passport: $e', true);
     } finally {
-      // FIX: Remove from detected set after 2 seconds
-      // This allows user to re-scan the same passport if they want to undo + rescan
-      // But prevents accidental re-scanning while camera is still pointed at the code
       Future.delayed(const Duration(milliseconds: _Constants.processingQrExpiryMs), () {
         if (mounted) {
           _detectedBarcodes.remove(code);
@@ -341,6 +232,7 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
     setState(() {
       _scannedPassports.clear();
       _detectedBarcodes.clear();
+      _failedQrs.clear();
     });
   }
 
@@ -348,8 +240,9 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
     setState(() => _scannedPassports.removeAt(idx));
   }
 
-  // === BOX SELECTION (Step 2) ===
-
+  // ============================================================================
+  // STEP 2: SELECT BOX (PAGINATED & ROOM FILTERED)
+  // ============================================================================
   Future<void> _loadAvailableBoxes({bool resetPage = true}) async {
     if (resetPage) {
       setState(() {
@@ -388,7 +281,7 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoadingBoxes = false);
-        _showFeedback('Failed to load boxes', true);
+        _showFeedback('Failed to load available boxes', true);
       }
     }
   }
@@ -402,8 +295,6 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
 
   void _onSearchChanged(String query) {
     setState(() => _searchQuery = query);
-
-    // Cancel previous debounce
     _searchDebounceTimer?.cancel();
     _searchDebounceTimer = Timer(const Duration(milliseconds: _Constants.searchDebounceMs), () {
       if (mounted && _searchQuery == query) {
@@ -438,11 +329,12 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
     }
   }
 
-  // === BOX VERIFICATION (Steps 3 & 4) ===
-
-  /// Handles box QR scan. If match: proceed to step 4. If mismatch: raise error.
-  void _onBoxQrScanned(String scannedQr) {
+  // ============================================================================
+  // STEP 3: SCAN & VERIFY BOX QR
+  // ============================================================================
+  void _onBoxQrScanned(String scannedQr) async {
     if (_selectedBox == null) return;
+    if (_isSubmitting) return;
 
     if (scannedQr == _selectedBox!.qrCode) {
       if (!mounted) return;
@@ -451,30 +343,166 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
         _clearMismatch();
         _currentStep = 4;
       });
-      _showFeedback('Box verified', false);
+      _showFeedback('Box QR matches selected box details', false);
     } else {
-      setState(() => _scannedBoxQr = null);
-      _raiseMismatch('Wrong box — this is not the selected box. Please scan the correct QR code.');
+      setState(() => _isSubmitting = true);
+      try {
+        final scannedBox = await _boxRepo.getByQr(scannedQr);
+        setState(() => _isSubmitting = false);
+
+        if (scannedBox == null) {
+          _raiseMismatch('Wrong box QR scanned. Expected ${_selectedBox!.label}, but scanned QR code is unrecognized in the system.');
+          return;
+        }
+
+        _showMismatchOptionsDialog(scannedBox);
+      } catch (e) {
+        setState(() => _isSubmitting = false);
+        _raiseMismatch('Error looking up scanned box: $e');
+      }
     }
   }
 
-  /// Handles slot QR scan. Just captures it; submit is separate.
-  void _onSlotQrScanned(String scannedQr) {
-    if (!mounted) return;
-    setState(() {
-      _scannedSlotQr = scannedQr;
-      _clearMismatch();
-    });
+  void _showMismatchOptionsDialog(models.Box scannedBox) {
+    final fits = (scannedBox.capacity - scannedBox.occupiedCount) >= _scannedPassports.length;
+
+    showModalBottomSheet(
+      context: context,
+      isDismissible: false,
+      enableDrag: false,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: const [
+                Icon(Icons.warning_amber_rounded, color: AppColors.warning, size: 28),
+                SizedBox(width: 12),
+                Text(
+                  'Physical Box Mismatch',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primaryDark),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Expected Box: ${_selectedBox!.label}\nScanned Box: ${scannedBox.label} (${scannedBox.location ?? "Unassigned Location"})',
+              style: const TextStyle(fontSize: 14, color: AppColors.primaryDark, height: 1.4),
+            ),
+            const SizedBox(height: 12),
+            if (!fits)
+              const Text(
+                'Note: The physically scanned box does not have enough capacity for your stack.',
+                style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 13),
+              )
+            else
+              Text(
+                'The physically scanned box has ${scannedBox.capacity - scannedBox.occupiedCount} vacant slots, which fits your ${_scannedPassports.length} passports.',
+                style: const TextStyle(color: AppColors.textBody, fontSize: 13),
+              ),
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      _goToStep(2);
+                    },
+                    child: const Text('Find Correct Box'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                if (fits)
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                      ),
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        setState(() {
+                          _selectedBox = scannedBox;
+                          _scannedBoxQr = scannedBox.qrCode;
+                          _clearMismatch();
+                          _currentStep = 4;
+                        });
+                        _showFeedback('Switched to physically scanned box: ${scannedBox.label}', false);
+                      },
+                      child: Text('Use ${scannedBox.label}'),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancel & Rescan'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
-  // === BATCH RETURN SUBMISSION ===
+  // ============================================================================
+  // STEP 4: SCAN SLOT & CUSTODY VALIDATION
+  // ============================================================================
+  void _onSlotQrScanned(String scannedQr) async {
+    if (_selectedBox == null || _scannedBoxQr == null) return;
 
+    setState(() {
+      _scannedSlotQr = scannedQr;
+      _isLoadingValidation = true;
+      _validationResponse = null;
+      _clearMismatch();
+    });
+
+    try {
+      final res = await _locationRepo.validateReturn(
+        selectedBoxId: _selectedBox!.id,
+        scannedBoxQr: _scannedBoxQr!,
+        scannedSlotQr: scannedQr,
+      );
+
+      setState(() {
+        _validationResponse = res;
+        _isLoadingValidation = false;
+      });
+
+      if (res != null) {
+        final recommendedAction = res['recommendedAction'];
+        final message = res['message'] ?? '';
+        if (recommendedAction == 'RESOLVE_CONFLICTS') {
+          _raiseMismatch(message);
+        } else {
+          _showFeedback(message.isNotEmpty ? message : 'Physical custody validated', false);
+        }
+      }
+    } catch (e) {
+      setState(() => _isLoadingValidation = false);
+      _raiseMismatch('Error validating slot custody layout: $e');
+    }
+  }
+
+  // ============================================================================
+  // EXECUTE RETURN SUBMISSION
+  // ============================================================================
   Future<void> _executeBatchReturn() async {
     if (_selectedBox == null || _scannedBoxQr == null || _scannedSlotQr == null) {
       return;
     }
 
-    if (!mounted) return;
     setState(() => _isSubmitting = true);
 
     try {
@@ -483,18 +511,16 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
         passportIds: passportIds,
         boxId: _selectedBox!.id,
         slotQrCode: _scannedSlotQr!,
+        overrideLocation: _overrideLocation,
         action: 'PASSPORT_RETURNED',
       );
 
-      if (!mounted) return;
       setState(() => _isSubmitting = false);
       _showSuccessDialog();
     } on DioException catch (dioErr) {
-      if (!mounted) return;
       setState(() => _isSubmitting = false);
       _handleReturnError(dioErr);
     } catch (e) {
-      if (!mounted) return;
       setState(() => _isSubmitting = false);
       _showFeedback('Return failed: $e', true);
     }
@@ -502,163 +528,120 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
 
   void _handleReturnError(DioException dioErr) {
     final responseData = dioErr.response?.data;
-
-    if (responseData is Map && responseData['error'] == 'LOCATION_MISMATCH') {
-      setState(() => _scannedSlotQr = null);
-      _raiseMismatch('Location mismatch — wrong slot for this box location.');
-      return;
-    }
-
-    final message =
-        (responseData is Map ? responseData['message'] : null) ?? 'Network error';
+    final message = (responseData is Map ? responseData['message'] : null) ?? 'Network error';
     _showFeedback(message, true);
   }
 
-  // void _showSuccessDialog() {
-  //   showDialog(
-  //     context: context,
-  //     barrierDismissible: false,
-  //     builder: (ctx) => AlertDialog(
-  //       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-  //       icon: Container(
-  //         width: 64,
-  //         height: 64,
-  //         decoration: BoxDecoration(
-  //           shape: BoxShape.circle,
-  //           color: AppColors.success.withValues(alpha: 0.1),
-  //         ),
-  //         child: const Icon(Icons.check_circle_rounded, size: 40, color: AppColors.success),
-  //       ),
-  //       title: const Text('Return Confirmed', style: TextStyle(fontWeight: FontWeight.bold)),
-  //       content: Text(
-  //         'Successfully returned ${_scannedPassports.length} passports to Box ${_selectedBox!.label}.',
-  //         textAlign: TextAlign.center,
-  //       ),
-  //       actions: [
-  //         SizedBox(
-  //           width: double.infinity,
-  //           child: ElevatedButton(
-  //             style: _buttonStyle,
-  //             onPressed: () {
-  //               Navigator.pop(ctx);
-  //               context.pop();
-  //             },
-  //             child: const Text('Back to Dashboard'),
-  //           ),
-  //         ),
-  //       ],
-  //     ),
-  //   );
-  // }
-void _showSuccessDialog() {
-  final count = _scannedPassports.length;
+  void _showSuccessDialog() {
+    final count = _scannedPassports.length;
 
-  showModalBottomSheet(
-    context: context,
-    isDismissible: false,
-    enableDrag: false,
-    backgroundColor: Colors.white,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-    ),
-    builder: (ctx) => Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Colored header band
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
-            decoration: BoxDecoration(
-              color: AppColors.success,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-            ),
-            child: Column(
-              children: [
-                const Icon(Icons.inventory_2_rounded, color: Colors.white, size: 32),
-                const SizedBox(height: 10),
-                Text(
-                  '$count Passport${count == 1 ? '' : 's'} Returned',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 19,
+    showModalBottomSheet(
+      context: context,
+      isDismissible: false,
+      enableDrag: false,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+              decoration: const BoxDecoration(
+                color: AppColors.success,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+              ),
+              child: Column(
+                children: [
+                  const Icon(Icons.inventory_2_rounded, color: Colors.white, size: 32),
+                  const SizedBox(height: 10),
+                  Text(
+                    '$count Passport${count == 1 ? '' : 's'} Returned',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 19,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Stored in ${_selectedBox!.label}',
-                  style: const TextStyle(color: Colors.white70, fontSize: 13),
-                ),
-              ],
+                  const SizedBox(height: 4),
+                  Text(
+                    'Stored in ${_selectedBox!.label}',
+                    style: const TextStyle(color: Colors.white70, fontSize: 13),
+                  ),
+                ],
+              ),
             ),
-          ),
-
-          // Names row
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 18, 24, 4),
-            child: Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              alignment: WrapAlignment.center,
-              children: _scannedPassports
-                  .map((p) => Chip(
-                        label: Text(p.holderName, style: const TextStyle(fontSize: 11.5)),
-                        backgroundColor: AppColors.surface,
-                        side: BorderSide(color: AppColors.border),
-                        visualDensity: VisualDensity.compact,
-                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ))
-                  .toList(),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 18, 24, 4),
+              child: Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                alignment: WrapAlignment.center,
+                children: _scannedPassports
+                    .map((p) => Chip(
+                          label: Text(p.holderName, style: const TextStyle(fontSize: 11.5)),
+                          backgroundColor: AppColors.surface,
+                          side: BorderSide(color: AppColors.border),
+                          visualDensity: VisualDensity.compact,
+                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ))
+                    .toList(),
+              ),
             ),
-          ),
-
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-            child: Column(
-              children: [
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    style: _buttonStyle,
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+              child: Column(
+                children: [
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: _buttonStyle,
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        context.pop();
+                      },
+                      child: const Text('Back to Dashboard'),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  TextButton(
                     onPressed: () {
                       Navigator.pop(ctx);
-                      context.pop();
+                      _resetForNewBatch();
                     },
-                    child: const Text('Back to Dashboard'),
+                    child: const Text('Return Another Batch'),
                   ),
-                ),
-                const SizedBox(height: 4),
-                TextButton(
-                  onPressed: () {
-                    Navigator.pop(ctx);
-                    _resetForNewBatch();
-                  },
-                  child: const Text('Return Another Batch'),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
-void _resetForNewBatch() {
-  setState(() {
-    _scannedPassports.clear();
-    _detectedBarcodes.clear();
-    _selectedBox = null;
-    _scannedBoxQr = null;
-    _scannedSlotQr = null;
-    _mismatchMessage = null;
-    _currentStep = 1;
-  });
-}
-  // === UI BUILDERS ===
+  void _resetForNewBatch() {
+    setState(() {
+      _scannedPassports.clear();
+      _detectedBarcodes.clear();
+      _failedQrs.clear();
+      _selectedBox = null;
+      _scannedBoxQr = null;
+      _scannedSlotQr = null;
+      _mismatchMessage = null;
+      _validationResponse = null;
+      _overrideLocation = false;
+      _currentStep = 1;
+    });
+  }
 
+  // ============================================================================
+  // UI BUILDERS
+  // ============================================================================
   static final _buttonStyle = ElevatedButton.styleFrom(
     minimumSize: const Size.fromHeight(50),
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -796,22 +779,6 @@ void _resetForNewBatch() {
     }
   }
 
-  // ============================================================================
-  // STEP 1: Scan Passports - QR Code Input
-  // ============================================================================
-  /// Builds the passport scanning step.
-  ///
-  /// IMPORTANT: The MobileScanner below fires onDetect on EVERY FRAME (~60fps)
-  /// while a barcode is visible. This is normal behavior.
-  ///
-  /// The snackbar spam fix works like this:
-  /// 1. MobileScanner detects barcode → calls onDetect (multiple times per second)
-  /// 2. onDetect calls _onBarcode(code)
-  /// 3. _onBarcode debounces with 800ms timer (resets timer each frame)
-  /// 4. After 800ms stable, timer fires → calls _addPassportByQr
-  /// 5. _addPassportByQr makes API call + shows snackbar (throttled to 500ms min)
-  ///
-  /// Result: Smooth scanning without spam!
   Widget _buildStep1() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
@@ -823,14 +790,11 @@ void _resetForNewBatch() {
               borderRadius: BorderRadius.circular(20),
               child: Stack(
                 children: [
-                  // The scanner camera feed
-                  // NOTE: This fires onDetect EVERY FRAME - don't do heavy work here!
-                  // Heavy work goes in _onBarcode → _addPassportByQr (debounced)
                   MobileScanner(
                     onDetect: (capture) {
                       final barcode = capture.barcodes.firstOrNull;
                       if (barcode?.rawValue != null) {
-                        _onBarcode(barcode!.rawValue!); // ← Debounced gateway
+                        _onBarcode(barcode!.rawValue!);
                       }
                     },
                   ),
@@ -915,7 +879,7 @@ void _resetForNewBatch() {
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     style: _buttonStyle,
-                    onPressed: _scannedPassports.isEmpty ? null : _loadAvailableBoxes,
+                    onPressed: _scannedPassports.isEmpty ? null : () => _loadAvailableBoxes(resetPage: true),
                     icon: const Icon(Icons.inventory_2_outlined),
                     label: const Text('Find Storage Box'),
                   ),
@@ -928,7 +892,6 @@ void _resetForNewBatch() {
     );
   }
 
-  // --- STEP 2: Select Box ---
   Widget _buildStep2() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
@@ -1037,7 +1000,7 @@ void _resetForNewBatch() {
     if (_availableBoxes.isEmpty) {
       return const _EmptyState(
         icon: Icons.search_off,
-        message: 'No suitable boxes found.\nTry different search terms.',
+        message: 'No suitable boxes found.\nTry changing your filters.',
       );
     }
 
@@ -1160,7 +1123,6 @@ void _resetForNewBatch() {
     );
   }
 
-  // --- STEP 3: Scan Box QR Code ---
   Widget _buildStep3() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
@@ -1177,26 +1139,22 @@ void _resetForNewBatch() {
               const SizedBox(height: 16),
             ],
             const Text(
-              'Verify Physical Box',
+              'Verify Physical Box (Step 1 of 2)',
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.primaryDark),
             ),
             const Text(
-              'Scan the QR code on the physical box',
+              'Scan the QR code on the physical box to verify box custody identity.',
               style: TextStyle(color: AppColors.textBody, fontSize: 12),
             ),
             const SizedBox(height: 16),
             _buildBoxInfoCard(),
             const SizedBox(height: 20),
             SizedBox(
-              height: 300,
+              height: 280,
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(20),
                 child: Stack(
                   children: [
-                    // Box QR Scanner - Step 3
-                    // NOTE: Unlike Step 1, this does NOT debounce.
-                    // Box QR scans should be immediate (single scan per box).
-                    // The logic handles rapid detection by checking if QR matches.
                     MobileScanner(
                       onDetect: (capture) {
                         final barcode = capture.barcodes.firstOrNull;
@@ -1210,17 +1168,11 @@ void _resetForNewBatch() {
                       bottom: 16,
                       left: 0,
                       right: 0,
-                      child: Center(child: _ScanHint(text: 'Point camera at the box QR code')),
+                      child: Center(child: _ScanHint(text: 'Point camera at Box QR code')),
                     ),
                   ],
                 ),
               ),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Make sure you are scanning the QR code on the physical storage box',
-              style: TextStyle(fontSize: 12, color: AppColors.textBody),
-              textAlign: TextAlign.center,
             ),
           ],
         ),
@@ -1252,11 +1204,11 @@ void _resetForNewBatch() {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Selected Box: ${_selectedBox!.label}',
+                        'Target Box: ${_selectedBox!.label}',
                         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                       ),
                       Text(
-                        'Capacity: ${_selectedBox!.occupiedCount}/${_selectedBox!.capacity} slots',
+                        'Capacity: ${_selectedBox!.occupiedCount}/${_selectedBox!.capacity} occupied',
                         style: const TextStyle(fontSize: 12, color: AppColors.textBody),
                       ),
                     ],
@@ -1266,12 +1218,13 @@ void _resetForNewBatch() {
             ),
             const Divider(height: 24),
             Text(
-              'Expected QR: ${_selectedBox!.qrCode}',
-              style: const TextStyle(fontSize: 13, color: AppColors.textBody, fontFamily: 'monospace'),
+              'Expected QR Code: ${_selectedBox!.qrCode}',
+              style: const TextStyle(fontSize: 12, color: AppColors.textBody, fontFamily: 'monospace'),
             ),
+            const SizedBox(height: 4),
             Text(
-              'Location: ${_selectedBox!.location ?? "Unassigned"}',
-              style: const TextStyle(fontSize: 13, color: AppColors.textBody),
+              'Expected Location: ${_selectedBox!.location ?? "Unassigned"}',
+              style: const TextStyle(fontSize: 12, color: AppColors.textBody),
             ),
           ],
         ),
@@ -1279,164 +1232,220 @@ void _resetForNewBatch() {
     );
   }
 
-  // --- STEP 4: Scan Slot QR Code ---
   Widget _buildStep4() {
+    final validation = _validationResponse;
+    final recommendedAction = validation != null ? validation['recommendedAction'] : null;
+    final message = validation != null ? validation['message'] : null;
+
+    final hasConflict = recommendedAction == 'RESOLVE_CONFLICTS';
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (_mismatchMessage != null) ...[
-            _MismatchBanner(
-              message: _mismatchMessage!,
-              onDismiss: _clearMismatch,
+      child: SingleChildScrollView(
+        controller: _step4ScrollController,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (_mismatchMessage != null) ...[
+              _MismatchBanner(
+                message: _mismatchMessage!,
+                onDismiss: _clearMismatch,
+              ),
+              const SizedBox(height: 16),
+            ],
+            const Text(
+              'Verify Location Slot (Step 2 of 2)',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.primaryDark),
+            ),
+            const Text(
+              'Scan the Slot QR code to confirm final physical custody location.',
+              style: TextStyle(color: AppColors.textBody, fontSize: 12),
             ),
             const SizedBox(height: 16),
-          ],
-          const Text(
-            'Select Storage Slot',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.primaryDark),
-          ),
-          const Text(
-            'Scan the QR code on the storage slot',
-            style: TextStyle(color: AppColors.textBody, fontSize: 12),
-          ),
-          const SizedBox(height: 16),
-          _FlatCard(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+            _buildVerifiedBoxCard(),
+            const SizedBox(height: 20),
+            if (_scannedSlotQr == null)
+              SizedBox(
+                height: 240,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: Stack(
                     children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: AppColors.success.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(Icons.check_circle, color: AppColors.success),
+                      MobileScanner(
+                        onDetect: (capture) {
+                          final barcode = capture.barcodes.firstOrNull;
+                          if (barcode?.rawValue != null) {
+                            _onSlotQrScanned(barcode!.rawValue!);
+                          }
+                        },
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Box Verified: ${_selectedBox!.label}',
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                            ),
-                            Text(
-                              'Returning ${_scannedPassports.length} passports',
-                              style: const TextStyle(fontSize: 12, color: AppColors.textBody),
-                            ),
-                          ],
-                        ),
+                      const _ScanReticle(),
+                      const Positioned(
+                        bottom: 16,
+                        left: 0,
+                        right: 0,
+                        child: Center(child: _ScanHint(text: 'Point camera at Slot QR code')),
                       ),
                     ],
                   ),
-                  const Divider(height: 24),
-                  Text(
-                    'Location: ${_selectedBox!.location ?? "Unassigned"}',
-                    style: const TextStyle(fontSize: 13, color: AppColors.textBody),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-          Expanded(
-            child: Column(
-              children: [
-                Expanded(
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(20),
-                    child: Stack(
-                      children: [
-                        // Slot QR Scanner - Step 4
-                        // NOTE: Like Step 3, this does NOT debounce.
-                        // Slot detection should be immediate and responsive.
-                        // The UI immediately shows success feedback when detected.
-                        MobileScanner(
-                          onDetect: (capture) {
-                            final barcode = capture.barcodes.firstOrNull;
-                            if (barcode?.rawValue != null) {
-                              _onSlotQrScanned(barcode!.rawValue!);
-                            }
-                          },
-                        ),
-                        const _ScanReticle(),
-                        const Positioned(
-                          bottom: 16,
-                          left: 0,
-                          right: 0,
-                          child: Center(child: _ScanHint(text: 'Point camera at the slot QR code')),
-                        ),
-                      ],
-                    ),
-                  ),
                 ),
-                const SizedBox(height: 16),
-                if (_scannedSlotQr != null) ...[
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: AppColors.success.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Row(
+              ),
+            if (_isLoadingValidation) ...[
+              const SizedBox(height: 20),
+              const Center(
+                child: CircularProgressIndicator(),
+              ),
+            ],
+            if (_scannedSlotQr != null && !_isLoadingValidation) ...[
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: (hasConflict ? AppColors.warning : AppColors.success).withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: hasConflict ? AppColors.warning : AppColors.success),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
                       children: [
-                        const Icon(Icons.check_circle, color: AppColors.success, size: 20),
+                        Icon(
+                          hasConflict ? Icons.warning_amber_rounded : Icons.check_circle_outline_rounded,
+                          color: hasConflict ? AppColors.warning : AppColors.success,
+                          size: 20,
+                        ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            'Slot scanned: $_scannedSlotQr',
-                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                            hasConflict ? 'Location Conflict Detected' : 'Custody Alignment Safe',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: hasConflict ? AppColors.warning : AppColors.success,
+                            ),
                           ),
                         ),
                         TextButton(
-                          onPressed: () => setState(() => _scannedSlotQr = null),
-                          child: const Text('Rescan', style: TextStyle(fontSize: 11)),
+                          onPressed: () {
+                            setState(() {
+                              _scannedSlotQr = null;
+                              _validationResponse = null;
+                              _overrideLocation = false;
+                              _clearMismatch();
+                            });
+                          },
+                          child: const Text('Rescan Slot'),
                         ),
                       ],
                     ),
+                    const SizedBox(height: 8),
+                    Text(
+                      message ?? 'The box and slot are correctly aligned.',
+                      style: const TextStyle(fontSize: 12.5, color: AppColors.primaryDark, height: 1.3),
+                    ),
+                  ],
+                ),
+              ),
+              if (hasConflict) ...[
+                const SizedBox(height: 16),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.border),
                   ),
-                  const SizedBox(height: 16),
-                ] else ...[
-                  const Text(
-                    'Scan the QR code on the specific slot',
-                    style: TextStyle(fontSize: 12, color: AppColors.textBody),
-                    textAlign: TextAlign.center,
+                  child: CheckboxListTile(
+                    title: const Text(
+                      'I have verified the physical location and confirm this displacement override.',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primaryDark),
+                    ),
+                    value: _overrideLocation,
+                    activeColor: AppColors.warning,
+                    onChanged: (val) {
+                      setState(() {
+                        _overrideLocation = val ?? false;
+                      });
+                    },
                   ),
-                  const SizedBox(height: 16),
-                ],
-                SizedBox(
-                  width: double.infinity,
-                  child: _isSubmitting
-                      ? const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 12),
-                          child: Center(child: CircularProgressIndicator()),
-                        )
-                      : ElevatedButton.icon(
-                          style: _buttonStyle,
-                          onPressed: _scannedSlotQr == null ? null : _executeBatchReturn,
-                          icon: const Icon(Icons.check_circle_outline_rounded),
-                          label: const Text('Complete Return'),
-                        ),
+                ),
+              ],
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: _isSubmitting
+                    ? const Center(child: CircularProgressIndicator())
+                    : ElevatedButton(
+                        style: _buttonStyle,
+                        onPressed: (hasConflict && !_overrideLocation) ? null : _executeBatchReturn,
+                        child: const Text('Complete Return & Assign'),
+                      ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVerifiedBoxCard() {
+    return _FlatCard(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: AppColors.success.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.check_circle_rounded, color: AppColors.success),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Verified Box: ${_selectedBox!.label}',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                      ),
+                      Text(
+                        'Returning ${_scannedPassports.length} passports',
+                        style: const TextStyle(fontSize: 12, color: AppColors.textBody),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
-          ),
-        ],
+            const Divider(height: 24),
+            Text(
+              'Expected Location: ${_selectedBox!.location ?? "Unassigned"}',
+              style: const TextStyle(fontSize: 12, color: AppColors.textBody),
+            ),
+            if (_scannedSlotQr != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                'Scanned Slot QR: $_scannedSlotQr',
+                style: const TextStyle(fontSize: 12, color: AppColors.textBody, fontFamily: 'monospace'),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
 }
 
-// === HELPER WIDGETS ===
-
+// ============================================================================
+// HELPER WIDGETS
+// ============================================================================
 class _ScanReticle extends StatelessWidget {
   const _ScanReticle();
 
@@ -1531,7 +1540,7 @@ class _FlatCard extends StatelessWidget {
         border: Border.all(color: AppColors.border),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primaryDark.withValues(alpha: 0.04),
+            color: AppColors.primaryDark.withOpacity(0.04),
             blurRadius: 10,
             offset: const Offset(0, 3),
           ),
@@ -1582,7 +1591,7 @@ class _MismatchBanner extends StatelessWidget {
             Container(width: 4, color: AppColors.warning),
             Expanded(
               child: Container(
-                color: AppColors.warning.withValues(alpha: 0.1),
+                color: AppColors.warning.withOpacity(0.1),
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.center,

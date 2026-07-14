@@ -47,7 +47,7 @@ class FloatingBottomNav extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
                       _buildNavItem(0, Icons.grid_view_rounded, 'Home'),
-                      _buildNavItem(1, Icons.assignment_outlined, 'Tasks'),
+                      _buildNavItem(1, Icons.explore_outlined, 'Explorer'),
                       // Placeholder space for center button
                       const SizedBox(width: 56),
                       _buildNavItem(3, Icons.inventory_2_outlined, 'Boxes'),

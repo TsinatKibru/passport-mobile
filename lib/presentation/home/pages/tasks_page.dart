@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
-import '../widgets/pending_task_card.dart';
 import '../widgets/fingerprint_background.dart';
 import '../widgets/glass_card.dart';
+import '../../../data/repositories/location_repository.dart';
+import '../../../data/repositories/box_repository.dart';
+import '../../../data/models/room.dart' as room_models;
+import '../../../data/models/box.dart' as box_models;
 
 class TasksPage extends StatefulWidget {
   const TasksPage({super.key});
@@ -13,131 +14,84 @@ class TasksPage extends StatefulWidget {
   State<TasksPage> createState() => _TasksPageState();
 }
 
-class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-  final TextEditingController _searchController = TextEditingController();
-  String _searchQuery = '';
+class _TasksPageState extends State<TasksPage> {
+  final LocationRepository _locationRepo = LocationRepository();
+  final BoxRepository _boxRepo = BoxRepository();
 
-  // Mock list of tasks based on real-world passport custody cases
-  final List<Map<String, dynamic>> _allTasks = [
-    {
-      'id': '1',
-      'applicant': 'Abebe Kebede',
-      'type': 'Issue Passport',
-      'mode': 'issue',
-      'priority': 'HIGH',
-      'time': 'ETA: 5 mins',
-    },
-    {
-      'id': '2',
-      'applicant': 'Sarah Yilma',
-      'type': 'Return Custody',
-      'mode': 'return',
-      'priority': 'HIGH',
-      'time': 'ETA: 10 mins',
-    },
-    {
-      'id': '3',
-      'applicant': 'Dawit Lemma',
-      'type': 'Assign Box',
-      'mode': 'assign',
-      'priority': 'HIGH',
-      'time': 'ETA: 12 mins',
-    },
-    {
-      'id': '4',
-      'applicant': 'Fatuma Ahmed',
-      'type': 'Issue Passport',
-      'mode': 'issue',
-      'priority': 'MEDIUM',
-      'time': 'ETA: 20 mins',
-    },
-    {
-      'id': '5',
-      'applicant': 'Yonas Assefa',
-      'type': 'Assign Box',
-      'mode': 'assign',
-      'priority': 'MEDIUM',
-      'time': 'ETA: 25 mins',
-    },
-    {
-      'id': '6',
-      'applicant': 'Helen Taye',
-      'type': 'Return Custody',
-      'mode': 'return',
-      'priority': 'MEDIUM',
-      'time': 'ETA: 30 mins',
-    },
-    {
-      'id': '7',
-      'applicant': 'Zenebech Abera',
-      'type': 'Issue Passport',
-      'mode': 'issue',
-      'priority': 'LOW',
-      'time': 'ETA: 45 mins',
-    },
-    {
-      'id': '8',
-      'applicant': 'Kidus Solomon',
-      'type': 'Assign Box',
-      'mode': 'assign',
-      'priority': 'LOW',
-      'time': 'ETA: 1 hr',
-    },
-    {
-      'id': '9',
-      'applicant': 'Marta Hagos',
-      'type': 'Return Custody',
-      'mode': 'return',
-      'priority': 'LOW',
-      'time': 'ETA: 1.5 hrs',
-    },
-    {
-      'id': '10',
-      'applicant': 'Samuel Tesfaye',
-      'type': 'Issue Passport',
-      'mode': 'issue',
-      'priority': 'LOW',
-      'time': 'ETA: 2 hrs',
-    },
-  ];
+  bool _isLoading = false;
+  List<room_models.Room> _rooms = [];
+  List<room_models.Shelf> _shelves = [];
+  List<room_models.VaultRow> _rows = [];
+  List<room_models.VaultSlot> _slots = [];
+
+  String _currentLevel = 'rooms';
+  room_models.Room? _selectedRoom;
+  room_models.Shelf? _selectedShelf;
+  room_models.VaultRow? _selectedRow;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _loadRooms();
   }
 
-  @override
-  void dispose() {
-    _tabController.dispose();
-    _searchController.dispose();
-    super.dispose();
+  Future<void> _loadRooms() async {
+    setState(() => _isLoading = true);
+    final list = await _locationRepo.getRooms();
+    setState(() {
+      _rooms = list;
+      _currentLevel = 'rooms';
+      _selectedRoom = null;
+      _selectedShelf = null;
+      _selectedRow = null;
+      _isLoading = false;
+    });
   }
 
-  List<Map<String, dynamic>> _filterTasks(String tab) {
-    List<Map<String, dynamic>> list = _allTasks;
-    
-    // Filter by tab
-    if (tab == 'High') {
-      list = _allTasks.where((t) => t['priority'] == 'HIGH').toList();
-    } else if (tab == 'Medium') {
-      list = _allTasks.where((t) => t['priority'] == 'MEDIUM').toList();
-    } else if (tab == 'Low') {
-      list = _allTasks.where((t) => t['priority'] == 'LOW').toList();
-    }
+  Future<void> _loadShelves(room_models.Room room) async {
+    setState(() => _isLoading = true);
+    final list = await _locationRepo.getShelves(room.id);
+    setState(() {
+      _shelves = list;
+      _selectedRoom = room;
+      _currentLevel = 'shelves';
+      _selectedShelf = null;
+      _selectedRow = null;
+      _isLoading = false;
+    });
+  }
 
-    // Filter by search query
-    if (_searchQuery.isNotEmpty) {
-      list = list.where((t) {
-        final name = t['applicant'].toString().toLowerCase();
-        final type = t['type'].toString().toLowerCase();
-        final query = _searchQuery.toLowerCase();
-        return name.contains(query) || type.contains(query);
-      }).toList();
-    }
+  Future<void> _loadRows(room_models.Shelf shelf) async {
+    setState(() => _isLoading = true);
+    final list = await _locationRepo.getRows(shelf.id);
+    setState(() {
+      _rows = list;
+      _selectedShelf = shelf;
+      _currentLevel = 'rows';
+      _selectedRow = null;
+      _isLoading = false;
+    });
+  }
 
-    return list;
+  Future<void> _loadSlots(room_models.VaultRow row) async {
+    setState(() => _isLoading = true);
+    final list = await _locationRepo.getSlots(row.id);
+    setState(() {
+      _slots = list;
+      _selectedRow = row;
+      _currentLevel = 'slots';
+      _isLoading = false;
+    });
+  }
+
+  void _navigateBack() {
+    if (_currentLevel == 'slots') {
+      _loadRows(_selectedShelf!);
+    } else if (_currentLevel == 'rows') {
+      _loadShelves(_selectedRoom!);
+    } else if (_currentLevel == 'shelves') {
+      _loadRooms();
+    }
   }
 
   @override
@@ -145,169 +99,454 @@ class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMix
     return Scaffold(
       backgroundColor: AppColors.surface,
       body: FingerprintBackground(
-        child: CustomScrollView(
-          slivers: [
-            // Large Premium Header
-            SliverAppBar(
-              expandedHeight: 120,
-              floating: false,
-              pinned: true,
-              backgroundColor: Colors.white,
-              elevation: 0,
-              flexibleSpace: FlexibleSpaceBar(
-                titlePadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                title: Text(
-                  'Today\'s Tasks',
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.primaryDark,
-                  ),
-                ),
-              ),
-            ),
-            
-            // Search Bar & Priority Tabs
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-                child: Column(
-                  children: [
-                    // Search Bar
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppColors.border),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.02),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
+        child: SafeArea(
+          bottom: false,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeader(),
+              _buildBreadcrumbs(),
+              Expanded(
+                child: _isLoading
+                    ? const Center(child: CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary)))
+                    : AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 300),
+                        transitionBuilder: (child, anim) => FadeTransition(
+                          opacity: anim,
+                          child: SlideTransition(
+                            position: Tween<Offset>(
+                              begin: const Offset(0.05, 0), end: Offset.zero,
+                            ).animate(anim),
+                            child: child,
                           ),
-                        ],
-                      ),
-                      child: TextField(
-                        controller: _searchController,
-                        onChanged: (val) {
-                          setState(() {
-                            _searchQuery = val;
-                          });
-                        },
-                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                        decoration: InputDecoration(
-                          hintText: 'Search applicant name or task type...',
-                          prefixIcon: const Icon(Icons.search_rounded, color: AppColors.textBody, size: 20),
-                          suffixIcon: _searchQuery.isNotEmpty
-                              ? IconButton(
-                                  icon: const Icon(Icons.clear, size: 18),
-                                  onPressed: () {
-                                    setState(() {
-                                      _searchController.clear();
-                                      _searchQuery = '';
-                                    });
-                                  },
-                                )
-                              : null,
-                          border: InputBorder.none,
-                          enabledBorder: InputBorder.none,
-                          focusedBorder: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(vertical: 14),
-                          filled: false,
                         ),
+                        child: _buildCurrentView(),
                       ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Priority Tabs Indicator
-                    TabBar(
-                      controller: _tabController,
-                      labelColor: AppColors.primary,
-                      unselectedLabelColor: AppColors.textBody.withOpacity(0.6),
-                      indicatorColor: AppColors.primary,
-                      indicatorWeight: 3.0,
-                      labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, fontFamily: 'Inter'),
-                      unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13, fontFamily: 'Inter'),
-                      tabs: const [
-                        Tab(text: 'All'),
-                        Tab(text: 'High'),
-                        Tab(text: 'Medium'),
-                        Tab(text: 'Low'),
-                      ],
-                    ),
-                  ],
-                ),
               ),
-            ),
-
-            // Tasks List
-            SliverFillRemaining(
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  _buildTasksList('All'),
-                  _buildTasksList('High'),
-                  _buildTasksList('Medium'),
-                  _buildTasksList('Low'),
-                ],
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildTasksList(String tabName) {
-    final tasks = _filterTasks(tabName);
-    
-    if (tasks.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.done_all_rounded,
-              size: 64,
-              color: AppColors.primary.withOpacity(0.15),
+  Widget _buildHeader() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Vault Explorer',
+                  style: TextStyle(fontFamily: 'Inter', fontSize: 24,
+                      fontWeight: FontWeight.w800, color: AppColors.primaryDark)),
+              const SizedBox(height: 4),
+              Text('Browse rooms, shelves & slot inventory',
+                  style: TextStyle(fontFamily: 'Inter', fontSize: 12,
+                      color: AppColors.textBody.withOpacity(0.7))),
+            ],
+          ),
+          if (_currentLevel != 'rooms')
+            IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.primary),
+              onPressed: _navigateBack,
             ),
-            const SizedBox(height: 16),
-            const Text(
-              'No Tasks Found',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primaryDark),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              _searchQuery.isNotEmpty
-                  ? 'Try refining your search terms'
-                  : 'All tasks under this category are completed!',
-              style: const TextStyle(fontSize: 12, color: AppColors.textBody),
-            ),
-          ],
-        ),
-      );
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBreadcrumbs() {
+    final crumbs = <Widget>[
+      GestureDetector(
+        onTap: _loadRooms,
+        child: Text('Rooms',
+            style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 13)),
+      ),
+    ];
+
+    if (_selectedRoom != null) {
+      crumbs.add(const Icon(Icons.chevron_right, size: 14, color: AppColors.textBody));
+      crumbs.add(GestureDetector(
+        onTap: () => _loadShelves(_selectedRoom!),
+        child: Text(_selectedRoom!.name,
+            style: TextStyle(
+              color: _currentLevel == 'shelves' ? AppColors.textBody : AppColors.primary,
+              fontWeight: FontWeight.bold, fontSize: 13)),
+      ));
+    }
+    if (_selectedShelf != null) {
+      crumbs.add(const Icon(Icons.chevron_right, size: 14, color: AppColors.textBody));
+      crumbs.add(GestureDetector(
+        onTap: () => _loadRows(_selectedShelf!),
+        child: Text(_selectedShelf!.name,
+            style: TextStyle(
+              color: _currentLevel == 'rows' ? AppColors.textBody : AppColors.primary,
+              fontWeight: FontWeight.bold, fontSize: 13)),
+      ));
+    }
+    if (_selectedRow != null) {
+      crumbs.add(const Icon(Icons.chevron_right, size: 14, color: AppColors.textBody));
+      crumbs.add(Text(_selectedRow!.name,
+          style: const TextStyle(color: AppColors.textBody, fontWeight: FontWeight.bold, fontSize: 13)));
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 100), // padding bottom to avoid floating nav overlap
-      itemCount: tasks.length,
-      itemBuilder: (context, index) {
-        final task = tasks[index];
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 12.0),
-          child: PendingTaskCard(
-            applicantName: task['applicant'],
-            taskType: task['type'],
-            priority: task['priority'],
-            timeText: task['time'],
-            onTap: () {
-              // Route directly to scan screen with correct mode parameters
-              context.push('/scan?mode=${task['mode']}');
-            },
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.border)),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(children: crumbs),
+      ),
+    );
+  }
+
+  Widget _buildCurrentView() {
+    switch (_currentLevel) {
+      case 'rooms': return _buildRoomsGrid();
+      case 'shelves': return _buildShelvesList();
+      case 'rows': return _buildRowsList();
+      case 'slots': return _buildSlotsGrid();
+      default: return const SizedBox();
+    }
+  }
+
+  Widget _buildRoomsGrid() {
+    if (_rooms.isEmpty) return _emptyState('No Rooms Configured');
+    return GridView.builder(
+      key: const ValueKey('rooms'),
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2, crossAxisSpacing: 16, mainAxisSpacing: 16, childAspectRatio: 1.1),
+      itemCount: _rooms.length,
+      itemBuilder: (_, i) {
+        final room = _rooms[i];
+        return GestureDetector(
+          onTap: () => _loadShelves(room),
+          child: GlassCard(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.1), shape: BoxShape.circle),
+                  child: const Icon(Icons.meeting_room_rounded, color: AppColors.primary, size: 24),
+                ),
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(room.name, style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.primaryDark)),
+                  const SizedBox(height: 4),
+                  Text('${room.shelfCount ?? 0} Shelves',
+                      style: TextStyle(fontSize: 12, color: AppColors.textBody.withOpacity(0.6))),
+                ]),
+              ],
+            ),
           ),
         );
       },
+    );
+  }
+
+  Widget _buildShelvesList() {
+    if (_shelves.isEmpty) return _emptyState('No Shelves Configured');
+    return ListView.builder(
+      key: const ValueKey('shelves'),
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
+      itemCount: _shelves.length,
+      itemBuilder: (_, i) {
+        final shelf = _shelves[i];
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: GestureDetector(
+            onTap: () => _loadRows(shelf),
+            child: GlassCard(
+              padding: const EdgeInsets.all(16),
+              child: Row(children: [
+                _iconBox(Icons.dns_rounded, AppColors.success),
+                const SizedBox(width: 16),
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(shelf.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.primaryDark)),
+                  Text('Position ${shelf.position}', style: TextStyle(fontSize: 12, color: AppColors.textBody.withOpacity(0.5))),
+                ])),
+                _badge('${shelf.rowCount ?? 0} Rows'),
+                const SizedBox(width: 8),
+                const Icon(Icons.chevron_right_rounded, color: AppColors.textBody, size: 20),
+              ]),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildRowsList() {
+    if (_rows.isEmpty) return _emptyState('No Rows Configured');
+    return ListView.builder(
+      key: const ValueKey('rows'),
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
+      itemCount: _rows.length,
+      itemBuilder: (_, i) {
+        final row = _rows[i];
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: GestureDetector(
+            onTap: () => _loadSlots(row),
+            child: GlassCard(
+              padding: const EdgeInsets.all(16),
+              child: Row(children: [
+                _iconBox(Icons.view_headline_rounded, AppColors.primaryDark),
+                const SizedBox(width: 16),
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(row.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.primaryDark)),
+                  Text('Position ${row.position}', style: TextStyle(fontSize: 12, color: AppColors.textBody.withOpacity(0.5))),
+                ])),
+                _badge('${row.slotCount ?? 0} Slots'),
+                const SizedBox(width: 8),
+                const Icon(Icons.chevron_right_rounded, color: AppColors.textBody, size: 20),
+              ]),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSlotsGrid() {
+    if (_slots.isEmpty) return _emptyState('No Slots Configured');
+    return GridView.builder(
+      key: const ValueKey('slots'),
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2, crossAxisSpacing: 14, mainAxisSpacing: 14, childAspectRatio: 0.88),
+      itemCount: _slots.length,
+      itemBuilder: (_, i) {
+        final slot = _slots[i];
+        final box = slot.boxes != null && slot.boxes!.isNotEmpty ? slot.boxes!.first : null;
+        return GestureDetector(
+          onTap: box != null ? () => _showBoxDetailsSheet(box.qrCode) : null,
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: box != null ? AppColors.primary.withOpacity(0.2) : AppColors.border, width: 1.5),
+              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))],
+            ),
+            padding: const EdgeInsets.all(14),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                Text(slot.name, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: AppColors.textBody)),
+                Icon(box != null ? Icons.inventory_2_rounded : Icons.crop_free_rounded,
+                    color: box != null ? AppColors.primary : AppColors.textBody.withOpacity(0.3), size: 16),
+              ]),
+              const Spacer(),
+              if (box != null) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: (box.status == 'FULL' ? Colors.red : AppColors.success).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(box.status,
+                      style: TextStyle(color: box.status == 'FULL' ? Colors.red : AppColors.success,
+                          fontWeight: FontWeight.bold, fontSize: 9)),
+                ),
+                const SizedBox(height: 8),
+                Text(box.label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.primaryDark)),
+                const SizedBox(height: 8),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: box.capacity > 0 ? box.occupiedCount / box.capacity : 0,
+                    backgroundColor: AppColors.border,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                        box.occupiedCount >= box.capacity ? Colors.red : AppColors.primary),
+                    minHeight: 5,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                  Text('Occupied:', style: TextStyle(fontSize: 10, color: AppColors.textBody.withOpacity(0.5))),
+                  Text('${box.occupiedCount}/${box.capacity}',
+                      style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.primaryDark)),
+                ]),
+              ] else
+                const Center(child: Text('EMPTY SLOT',
+                    style: TextStyle(fontSize: 11, color: AppColors.textBody, fontWeight: FontWeight.bold, letterSpacing: 0.5))),
+            ]),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _iconBox(IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+      child: Icon(icon, color: color, size: 22),
+    );
+  }
+
+  Widget _badge(String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+      child: Text(label, style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 11)),
+    );
+  }
+
+  Widget _emptyState(String msg) {
+    return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+      Icon(Icons.inventory_2_outlined, size: 64, color: AppColors.textBody.withOpacity(0.15)),
+      const SizedBox(height: 16),
+      Text(msg, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primaryDark)),
+    ]));
+  }
+
+  void _showBoxDetailsSheet(String boxQr) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _BoxDetailsSheet(boxQrCode: boxQr, boxRepo: _boxRepo),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Box Details Bottom Sheet
+// ─────────────────────────────────────────────────────────────────────────────
+class _BoxDetailsSheet extends StatefulWidget {
+  final String boxQrCode;
+  final BoxRepository boxRepo;
+  const _BoxDetailsSheet({required this.boxQrCode, required this.boxRepo});
+
+  @override
+  State<_BoxDetailsSheet> createState() => _BoxDetailsSheetState();
+}
+
+class _BoxDetailsSheetState extends State<_BoxDetailsSheet> {
+  bool _loading = true;
+  box_models.Box? _box;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetch();
+  }
+
+  Future<void> _fetch() async {
+    try {
+      final b = await widget.boxRepo.getByQr(widget.boxQrCode);
+      setState(() { _box = b; _loading = false; });
+    } catch (e) {
+      setState(() { _error = e.toString(); _loading = false; });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.75,
+      decoration: const BoxDecoration(color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+      child: Column(children: [
+        const SizedBox(height: 12),
+        Container(width: 48, height: 5,
+            decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(10))),
+        const SizedBox(height: 16),
+        Expanded(child: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : _error != null
+                ? Center(child: Text(_error!, style: const TextStyle(color: Colors.red)))
+                : _buildContent()),
+      ]),
+    );
+  }
+
+  Widget _buildContent() {
+    final box = _box!;
+    final passports = box.passports ?? [];
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(box.label, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.primaryDark)),
+            Text('QR: ${box.qrCode}', style: const TextStyle(fontSize: 12, color: AppColors.textBody)),
+          ]),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+            child: Text('${box.occupiedCount}/${box.capacity}',
+                style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 13)),
+          ),
+        ]),
+        const SizedBox(height: 16),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.border)),
+          child: Row(children: [
+            const Icon(Icons.location_on_rounded, color: AppColors.primary, size: 20),
+            const SizedBox(width: 12),
+            Expanded(child: Text(box.location ?? 'Unassigned Location',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.primaryDark))),
+          ]),
+        ),
+        const SizedBox(height: 24),
+        const Text('Contained Passports',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primaryDark)),
+        const SizedBox(height: 12),
+        Expanded(
+          child: passports.isEmpty
+              ? const Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  Icon(Icons.assignment_turned_in_rounded, size: 48, color: Color(0x33000000)),
+                  SizedBox(height: 12),
+                  Text('No passports inside this box', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textBody)),
+                ]))
+              : ListView.builder(
+                  itemCount: passports.length,
+                  itemBuilder: (_, i) {
+                    final p = passports[i];
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: AppColors.border)),
+                      child: Row(children: [
+                        Container(padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.08), shape: BoxShape.circle),
+                            child: const Icon(Icons.badge_rounded, color: AppColors.primary, size: 20)),
+                        const SizedBox(width: 14),
+                        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Text(p.holderName,
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.primaryDark)),
+                          Text('ID: ${p.holderIdNo}',
+                              style: TextStyle(fontSize: 11, color: AppColors.textBody.withOpacity(0.6))),
+                        ])),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(color: AppColors.success.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                          child: Text(p.status,
+                              style: const TextStyle(color: AppColors.success, fontWeight: FontWeight.bold, fontSize: 10)),
+                        ),
+                      ]),
+                    );
+                  },
+                ),
+        ),
+      ]),
     );
   }
 }
