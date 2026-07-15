@@ -3,6 +3,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/repositories/box_repository.dart';
 import '../../../data/models/box.dart' as models;
+import '../../../l10n/app_localizations.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/fingerprint_background.dart';
 
@@ -79,7 +80,7 @@ class _BoxesPageState extends State<BoxesPage> {
       if (mounted) {
         setState(() {
           _isLoading = false;
-          _errorMessage = 'Failed to load boxes. Check your connection.';
+          _errorMessage = AppLocalizations.of(context).boxesLoadFailed;
         });
       }
     }
@@ -162,11 +163,11 @@ class _BoxesPageState extends State<BoxesPage> {
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 14),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 14),
                 child: Text(
-                  'Scan a box QR to search',
-                  style: TextStyle(
+                  AppLocalizations.of(context).boxesScanToSearch,
+                  style: const TextStyle(
                       fontFamily: 'Inter',
                       fontWeight: FontWeight.w700,
                       fontSize: 15,
@@ -205,6 +206,7 @@ class _BoxesPageState extends State<BoxesPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: AppColors.surface,
       body: FingerprintBackground(
@@ -223,7 +225,7 @@ class _BoxesPageState extends State<BoxesPage> {
               flexibleSpace: FlexibleSpaceBar(
                 titlePadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                 title: Text(
-                  'Box Inventory',
+                  l.boxesTitle,
                   style: TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 20,
@@ -234,7 +236,7 @@ class _BoxesPageState extends State<BoxesPage> {
               ),
               actions: [
                 IconButton(
-                  tooltip: _isGridView ? 'List view' : 'Grid view',
+                  tooltip: _isGridView ? l.boxesListView : l.boxesGridView,
                   icon: Icon(
                     _isGridView
                         ? Icons.view_agenda_outlined
@@ -244,7 +246,7 @@ class _BoxesPageState extends State<BoxesPage> {
                   onPressed: () => setState(() => _isGridView = !_isGridView),
                 ),
                 IconButton(
-                  tooltip: 'Scan box QR to search',
+                  tooltip: l.boxesScanToSearch,
                   icon: const Icon(Icons.qr_code_scanner_rounded,
                       color: AppColors.primary),
                   onPressed: _openScanSearch,
@@ -278,7 +280,7 @@ class _BoxesPageState extends State<BoxesPage> {
                         onSubmitted: _onSearch,
                         style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                         decoration: InputDecoration(
-                          hintText: 'Enter Box QR Code (e.g. BOX-0001)...',
+                          hintText: l.boxesSearchHint,
                           prefixIcon: const Icon(Icons.search_rounded, color: AppColors.textBody, size: 20),
                           suffixIcon: _searchController.text.isNotEmpty
                               ? IconButton(
@@ -304,13 +306,13 @@ class _BoxesPageState extends State<BoxesPage> {
                       scrollDirection: Axis.horizontal,
                       child: Row(
                         children: [
-                          _buildFilterChip('ALL', 'All Boxes'),
+                          _buildFilterChip('ALL', l.boxesFilterAll),
                           const SizedBox(width: 8),
-                          _buildFilterChip('ACTIVE', 'Active (Space available)'),
+                          _buildFilterChip('ACTIVE', l.boxesFilterActive),
                           const SizedBox(width: 8),
-                          _buildFilterChip('FULL', 'Full'),
+                          _buildFilterChip('FULL', l.boxStatusFull),
                           const SizedBox(width: 8),
-                          _buildFilterChip('INACTIVE', 'Inactive'),
+                          _buildFilterChip('INACTIVE', l.boxStatusInactive),
                         ],
                       ),
                     ),
@@ -340,7 +342,7 @@ class _BoxesPageState extends State<BoxesPage> {
                         ElevatedButton.icon(
                           onPressed: _fetchBoxes,
                           icon: const Icon(Icons.refresh),
-                          label: const Text('Retry'),
+                          label: Text(l.retry),
                         ),
                       ],
                     ),
@@ -356,12 +358,12 @@ class _BoxesPageState extends State<BoxesPage> {
                       Icon(Icons.inventory_2_rounded, size: 64,
                           color: AppColors.primary.withOpacity(0.15)),
                       const SizedBox(height: 16),
-                      const Text('No Boxes Found',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold,
+                      Text(l.boxesNoneFound,
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold,
                               color: AppColors.primaryDark)),
                       const SizedBox(height: 4),
-                      const Text('Try a different filter or search term',
-                          style: TextStyle(fontSize: 12, color: AppColors.textBody)),
+                      Text(l.boxesNoneHint,
+                          style: const TextStyle(fontSize: 12, color: AppColors.textBody)),
                     ],
                   ),
                 ),
@@ -409,7 +411,7 @@ class _BoxesPageState extends State<BoxesPage> {
                           )
                         : (!_hasMore
                             ? Text(
-                                '${_boxes.length} ${_boxes.length == 1 ? 'box' : 'boxes'}',
+                                '${_boxes.length} ${_boxes.length == 1 ? l.roomBoxSingular : l.roomBoxPlural}',
                                 style: const TextStyle(
                                     fontSize: 11, color: AppColors.textBody),
                               )
@@ -466,7 +468,22 @@ class _BoxesPageState extends State<BoxesPage> {
     );
   }
 
+  // Map a raw backend box status onto its localised label.
+  String _statusLabel(AppLocalizations l, String status) {
+    switch (status.toUpperCase()) {
+      case 'FULL':
+        return l.boxStatusFull;
+      case 'INACTIVE':
+        return l.boxStatusInactive;
+      case 'ACTIVE':
+        return l.boxStatusActive;
+      default:
+        return status;
+    }
+  }
+
   Widget _buildBoxCard(models.Box box) {
+    final l = AppLocalizations.of(context);
     Color statusColor;
     switch (box.status.toUpperCase()) {
       case 'FULL':
@@ -534,7 +551,7 @@ class _BoxesPageState extends State<BoxesPage> {
                   border: Border.all(color: statusColor.withValues(alpha: 0.2)),
                 ),
                 child: Text(
-                  box.status,
+                  _statusLabel(l, box.status),
                   style: TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 9,
@@ -555,7 +572,7 @@ class _BoxesPageState extends State<BoxesPage> {
               const SizedBox(width: 5),
               Expanded(
                 child: Text(
-                  box.location ?? 'Unallocated slot',
+                  box.location ?? l.boxesUnallocatedSlot,
                   style: const TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 11,
@@ -610,8 +627,8 @@ class _BoxesPageState extends State<BoxesPage> {
                   shadowColor: Colors.transparent,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
-                child: const Text('View Passports',
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                child: Text(l.boxesViewPassports,
+                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
               ),
             ],
           ),
@@ -622,6 +639,7 @@ class _BoxesPageState extends State<BoxesPage> {
 
   // Compact card for the grid view (2 columns).
   Widget _buildBoxGridCard(models.Box box) {
+    final l = AppLocalizations.of(context);
     Color statusColor;
     switch (box.status.toUpperCase()) {
       case 'FULL':
@@ -692,7 +710,7 @@ class _BoxesPageState extends State<BoxesPage> {
               const SizedBox(width: 4),
               Expanded(
                 child: Text(
-                  box.location ?? 'Unallocated',
+                  box.location ?? l.boxesUnallocated,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -706,7 +724,7 @@ class _BoxesPageState extends State<BoxesPage> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                box.status,
+                _statusLabel(l, box.status),
                 style: TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 9,
@@ -748,8 +766,8 @@ class _BoxesPageState extends State<BoxesPage> {
                 shadowColor: Colors.transparent,
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
-              child: const Text('View Passports',
-                  style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold)),
+              child: Text(l.boxesViewPassports,
+                  style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold)),
             ),
           ),
         ],
@@ -758,6 +776,7 @@ class _BoxesPageState extends State<BoxesPage> {
   }
 
   void _showBoxDetailSheet(BuildContext context, models.Box box) {
+    final l = AppLocalizations.of(context);
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -778,22 +797,22 @@ class _BoxesPageState extends State<BoxesPage> {
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
                   ),
                   Text(
-                    '${box.occupiedCount}/${box.capacity} slots',
+                    '${box.occupiedCount}/${box.capacity} ${l.boxesSlots}',
                     style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary),
                   ),
                 ],
               ),
               const SizedBox(height: 4),
               Text(
-                'Location: ${box.location ?? "HQ Storage"}',
+                '${l.boxesLocationLabel}: ${box.location ?? l.boxesDefaultLocation}',
                 style: const TextStyle(color: AppColors.textBody, fontSize: 12),
               ),
               const SizedBox(height: 16),
               const Divider(),
               const SizedBox(height: 12),
-              const Text(
-                'PASSPORTS INSIDE',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: AppColors.textBody, letterSpacing: 0.8),
+              Text(
+                l.boxesPassportsInside,
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: AppColors.textBody, letterSpacing: 0.8),
               ),
               const SizedBox(height: 8),
               // The list endpoint (/boxes) omits the passports array — fetch the
@@ -810,10 +829,10 @@ class _BoxesPageState extends State<BoxesPage> {
                     final passports =
                         snapshot.data?.passports ?? <models.PassportSummary>[];
                     if (passports.isEmpty) {
-                      return const Center(
+                      return Center(
                         child: Text(
-                          'No passports are currently assigned to this box.',
-                          style: TextStyle(color: AppColors.textBody, fontSize: 13),
+                          l.boxesNoPassports,
+                          style: const TextStyle(color: AppColors.textBody, fontSize: 13),
                         ),
                       );
                     }
@@ -828,7 +847,7 @@ class _BoxesPageState extends State<BoxesPage> {
                             child: const Icon(Icons.person, color: AppColors.primary, size: 16),
                           ),
                           title: Text(p.holderName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                          subtitle: Text('ID No: ${p.holderIdNo} • QR: ${p.qrCode}', style: const TextStyle(fontSize: 11)),
+                          subtitle: Text('${l.boxesIdNo}: ${p.holderIdNo} • QR: ${p.qrCode}', style: const TextStyle(fontSize: 11)),
                         );
                       },
                     );
