@@ -588,32 +588,26 @@ class _BoxesPageState extends State<BoxesPage> {
               const SizedBox(height: 8),
               // The list endpoint (/boxes) omits the passports array — fetch the
               // full box (with its passports) on demand when the sheet opens.
-              FutureBuilder<models.Box?>(
-                future: _boxRepo.getByQr(box.qrCode),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 28),
-                      child: Center(child: CircularProgressIndicator()),
-                    );
-                  }
-                  final passports =
-                      snapshot.data?.passports ?? <models.PassportSummary>[];
-                  if (passports.isEmpty) {
-                    return const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 20),
-                      child: Center(
+              // Expanded so the list fills the remaining sheet height and
+              // scrolls (rather than overflowing a fixed-height box).
+              Expanded(
+                child: FutureBuilder<models.Box?>(
+                  future: _boxRepo.getByQr(box.qrCode),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    final passports =
+                        snapshot.data?.passports ?? <models.PassportSummary>[];
+                    if (passports.isEmpty) {
+                      return const Center(
                         child: Text(
                           'No passports are currently assigned to this box.',
                           style: TextStyle(color: AppColors.textBody, fontSize: 13),
                         ),
-                      ),
-                    );
-                  }
-                  return ConstrainedBox(
-                    constraints: const BoxConstraints(maxHeight: 320),
-                    child: ListView.builder(
-                      shrinkWrap: true,
+                      );
+                    }
+                    return ListView.builder(
                       itemCount: passports.length,
                       itemBuilder: (context, idx) {
                         final p = passports[idx];
@@ -627,11 +621,10 @@ class _BoxesPageState extends State<BoxesPage> {
                           subtitle: Text('ID No: ${p.holderIdNo} • QR: ${p.qrCode}', style: const TextStyle(fontSize: 11)),
                         );
                       },
-                    ),
-                  );
-                },
+                    );
+                  },
+                ),
               ),
-              const SizedBox(height: 8),
             ],
           ),
         );
