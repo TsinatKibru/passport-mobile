@@ -1,160 +1,194 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/dashboard_stats.dart';
-import 'glass_card.dart';
-import 'wave_painter.dart';
 
+/// Minimal stat section — two rows of two cards each.
+/// Each card is plain white with one number and one label. No rings, no waves.
 class StatisticsGrid extends StatelessWidget {
   final DashboardStats stats;
-
-  const StatisticsGrid({
-    super.key,
-    required this.stats,
-  });
+  const StatisticsGrid({super.key, required this.stats});
 
   @override
   Widget build(BuildContext context) {
-    final occupancyRate = stats.totalPassports > 0
-        ? '${((stats.inBox / stats.totalPassports) * 100).toStringAsFixed(1)}%'
-        : '0%';
+    final occupancyPct = stats.totalCapacity > 0
+        ? (stats.totalOccupied / stats.totalCapacity * 100).toStringAsFixed(0)
+        : '0';
 
-    return GridView.count(
-      crossAxisCount: 2,
-      crossAxisSpacing: 16,
-      mainAxisSpacing: 16,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      childAspectRatio: 1.25,
+    return Column(
       children: [
-        _buildStatCard(
-          title: 'Total Boxes',
-          value: stats.totalBoxes.toString(),
-          subtitle: 'All registered boxes',
-          icon: Icons.inventory_2_rounded,
-          iconColor: AppColors.primary,
-          iconBg: AppColors.primary.withOpacity(0.08),
+        Row(
+          children: [
+            Expanded(child: _StatCard(
+              value: stats.totalPassports.toString(),
+              label: 'Total passports',
+              accent: AppColors.primary,
+            )),
+            const SizedBox(width: 12),
+            Expanded(child: _StatCard(
+              value: stats.issued.toString(),
+              label: 'Currently issued',
+              accent: AppColors.success,
+            )),
+          ],
         ),
-        _buildStatCard(
-          title: 'Occupied Boxes',
-          value: stats.occupiedBoxes.toString(),
-          subtitle: 'Currently in use',
-          icon: Icons.check_circle_rounded,
-          iconColor: AppColors.success,
-          iconBg: AppColors.success.withOpacity(0.08),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(child: _StatCard(
+              value: stats.inBox.toString(),
+              label: 'In vault',
+              accent: const Color(0xFF5B6B9E),
+            )),
+            const SizedBox(width: 12),
+            Expanded(child: _StatCard(
+              value: '$occupancyPct%',
+              label: 'Vault occupancy',
+              accent: AppColors.warning,
+            )),
+          ],
         ),
-        _buildStatCard(
-          title: 'Vacant Space',
-          value: stats.totalVacant.toString(),
-          subtitle: 'Available slots',
-          icon: Icons.unarchive_rounded,
-          iconColor: AppColors.warning,
-          iconBg: AppColors.warning.withOpacity(0.08),
-        ),
-        _buildStatCard(
-          title: 'Occupancy',
-          value: occupancyRate,
-          subtitle: 'Overall rate',
-          icon: Icons.trending_up_rounded,
-          iconColor: Colors.deepPurple,
-          iconBg: Colors.deepPurple.withOpacity(0.08),
+        const SizedBox(height: 12),
+        // Capacity bar — one clean row
+        _CapacityBar(
+          occupied: stats.totalOccupied,
+          total: stats.totalCapacity,
+          vacant: stats.totalVacant,
         ),
       ],
     );
   }
+}
 
-  Widget _buildStatCard({
-    required String title,
-    required String value,
-    required String subtitle,
-    required IconData icon,
-    required Color iconColor,
-    required Color iconBg,
-  }) {
-    return GlassCard(
-      padding: EdgeInsets.zero,
-      borderRadius: 24.0,
-      clipBehavior: Clip.antiAlias,
-      child: Stack(
+class _StatCard extends StatelessWidget {
+  final String value;
+  final String label;
+  final Color accent;
+
+  const _StatCard({
+    required this.value,
+    required this.label,
+    required this.accent,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border(left: BorderSide(color: accent, width: 3)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Wave decoration only at the bottom
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            height: 48,
-            child: IgnorePointer(
-              child: CustomPaint(
-                painter: WavePainter(
-                  color: iconColor,
-                  waveHeightPercent: 0.8,
+          Text(
+            value,
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 28,
+              fontWeight: FontWeight.w800,
+              color: AppColors.primaryDark,
+              letterSpacing: -0.5,
+              height: 1,
+            ),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            label,
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              color: AppColors.textBody,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CapacityBar extends StatelessWidget {
+  final int occupied;
+  final int total;
+  final int vacant;
+
+  const _CapacityBar({
+    required this.occupied,
+    required this.total,
+    required this.vacant,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final pct = total > 0 ? occupied / total : 0.0;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Storage capacity',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.primaryDark,
                 ),
+              ),
+              Text(
+                '$occupied / $total slots',
+                style: const TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 12,
+                  color: AppColors.textBody,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: LinearProgressIndicator(
+              value: pct.toDouble(),
+              minHeight: 7,
+              backgroundColor: AppColors.border,
+              valueColor: AlwaysStoppedAnimation<Color>(
+                pct >= 0.9 ? AppColors.danger : AppColors.primary,
               ),
             ),
           ),
-          // Content
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Icon and title row
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: iconBg,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(
-                        icon,
-                        color: iconColor,
-                        size: 20,
-                      ),
-                    ),
-                    Expanded(
-                      child: Text(
-                        title,
-                        textAlign: TextAlign.right,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textBody,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const Spacer(),
-                // Value text
-                Text(
-                  value,
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 26,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.primaryDark,
-                    letterSpacing: -0.5,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                // Subtitle text
-                Text(
-                  subtitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 9,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.textBody.withOpacity(0.8),
-                  ),
-                ),
-              ],
+          const SizedBox(height: 8),
+          Text(
+            '$vacant slots available',
+            style: const TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 11,
+              color: AppColors.textBody,
+              fontWeight: FontWeight.w500,
             ),
           ),
         ],

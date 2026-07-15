@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
-import 'glass_card.dart';
 
+/// Simple single-line activity row — icon, text, time. No stripes, no badges.
 class ActivityCard extends StatelessWidget {
   final String title;
   final String subtitle;
   final String timestamp;
-  final String actionType; // 'PASSPORT_ASSIGNED', 'PASSPORT_RETURNED', 'PASSPORT_ISSUED', 'BOX_MOVED'
+  final String actionType;
 
   const ActivityCard({
     super.key,
@@ -18,84 +18,64 @@ class ActivityCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    IconData iconData;
-    Color iconColor;
-    Color iconBg;
+    final style = _styleFor(actionType.toUpperCase());
 
-    switch (actionType.toUpperCase()) {
-      case 'PASSPORT_ISSUED':
-        iconData = Icons.assignment_turned_in_rounded;
-        iconColor = AppColors.success;
-        iconBg = AppColors.success.withOpacity(0.08);
-        break;
-      case 'PASSPORT_RETURNED':
-        iconData = Icons.swap_horizontal_circle_rounded;
-        iconColor = AppColors.warning;
-        iconBg = AppColors.warning.withOpacity(0.08);
-        break;
-      case 'BOX_MOVED':
-        iconData = Icons.place_rounded;
-        iconColor = Colors.deepPurple;
-        iconBg = Colors.deepPurple.withOpacity(0.08);
-        break;
-      case 'PASSPORT_ASSIGNED':
-      default:
-        iconData = Icons.inventory_2_rounded;
-        iconColor = AppColors.primary;
-        iconBg = AppColors.primary.withOpacity(0.08);
-        break;
-    }
-
-    return GlassCard(
-      padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 12.0),
-      borderRadius: 16,
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
+          // Icon container — small, clean
           Container(
-            padding: const EdgeInsets.all(10),
+            width: 38,
+            height: 38,
             decoration: BoxDecoration(
-              color: iconBg,
-              shape: BoxShape.circle,
+              color: style.color.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(
-              iconData,
-              color: iconColor,
-              size: 18,
-            ),
+            child: Icon(style.icon, color: style.color, size: 17),
           ),
           const SizedBox(width: 14),
+
+          // Text
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   title,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.onSurface,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primaryDark,
+                    height: 1.2,
                   ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 11,
-                    color: AppColors.textBody,
+                if (subtitle.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 11,
+                      color: AppColors.textBody,
+                    ),
                   ),
-                ),
+                ],
               ],
             ),
           ),
-          const SizedBox(width: 8),
+
+          // Timestamp
           Text(
             timestamp,
             style: TextStyle(
               fontFamily: 'Inter',
-              fontSize: 10,
-              color: AppColors.textBody.withOpacity(0.6),
+              fontSize: 11,
+              color: AppColors.textBody.withValues(alpha: 0.55),
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -103,4 +83,23 @@ class ActivityCard extends StatelessWidget {
       ),
     );
   }
+
+  _Style _styleFor(String action) {
+    switch (action) {
+      case 'PASSPORT_ISSUED':
+        return _Style(Icons.upload_rounded, AppColors.success);
+      case 'PASSPORT_RETURNED':
+        return _Style(Icons.download_rounded, AppColors.warning);
+      case 'BOX_MOVED':
+        return _Style(Icons.swap_horiz_rounded, const Color(0xFF5B6B9E));
+      default:
+        return _Style(Icons.archive_rounded, AppColors.primary);
+    }
+  }
+}
+
+class _Style {
+  final IconData icon;
+  final Color color;
+  const _Style(this.icon, this.color);
 }
