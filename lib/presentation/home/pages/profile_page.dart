@@ -489,9 +489,11 @@ class ProfilePage extends ConsumerWidget {
   }
 
   void _showChangePasswordDialog(BuildContext context, WidgetRef ref) async {
-    final ok = await showDialog<bool>(
+    final ok = await showModalBottomSheet<bool>(
       context: context,
-      builder: (_) => _ChangePasswordDialog(
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _ChangePasswordSheet(
         onSubmit: (current, newPass) => ref
             .read(authRepositoryProvider)
             .changePassword(currentPassword: current, newPassword: newPass),
@@ -509,20 +511,22 @@ class ProfilePage extends ConsumerWidget {
   }
 }
 
-class _ChangePasswordDialog extends StatefulWidget {
+class _ChangePasswordSheet extends StatefulWidget {
   final Future<String?> Function(String current, String newPass) onSubmit;
-  const _ChangePasswordDialog({required this.onSubmit});
+  const _ChangePasswordSheet({required this.onSubmit});
 
   @override
-  State<_ChangePasswordDialog> createState() => _ChangePasswordDialogState();
+  State<_ChangePasswordSheet> createState() => _ChangePasswordSheetState();
 }
 
-class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
+class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
   final _current = TextEditingController();
   final _newPass = TextEditingController();
   final _confirm = TextEditingController();
+  bool _obCurrent = true;
+  bool _obNew = true;
+  bool _obConfirm = true;
   bool _loading = false;
-  bool _obscure = true;
   String? _error;
 
   @override
@@ -558,68 +562,171 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
     }
   }
 
+  Widget _passwordField({
+    required TextEditingController controller,
+    required String label,
+    required bool obscure,
+    required VoidCallback onToggle,
+  }) {
+    return TextField(
+      controller: controller,
+      obscureText: obscure,
+      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: const TextStyle(color: AppColors.textBody, fontSize: 13),
+        filled: true,
+        fillColor: AppColors.surfaceVariant,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.border),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+        ),
+        suffixIcon: IconButton(
+          icon: Icon(
+            obscure
+                ? Icons.visibility_off_rounded
+                : Icons.visibility_rounded,
+            size: 20,
+            color: AppColors.textBody,
+          ),
+          onPressed: onToggle,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      title: const Text('Change Password'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          TextField(
-            controller: _current,
-            obscureText: true,
-            decoration: const InputDecoration(labelText: 'Current password'),
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: SingleChildScrollView(
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(22, 12, 22, 24),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
           ),
-          const SizedBox(height: 10),
-          TextField(
-            controller: _newPass,
-            obscureText: _obscure,
-            decoration: InputDecoration(
-              labelText: 'New password',
-              suffixIcon: IconButton(
-                icon: Icon(_obscure ? Icons.visibility_off : Icons.visibility,
-                    size: 18),
-                onPressed: () => setState(() => _obscure = !_obscure),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.border,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
               ),
-            ),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.08),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.lock_outline_rounded,
+                        color: AppColors.primary, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  const Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Change Password',
+                          style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w700,
+                              fontSize: 17,
+                              color: AppColors.primaryDark)),
+                      SizedBox(height: 2),
+                      Text('Update your login password',
+                          style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 12,
+                              color: AppColors.textBody)),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              _passwordField(
+                controller: _current,
+                label: 'Current password',
+                obscure: _obCurrent,
+                onToggle: () => setState(() => _obCurrent = !_obCurrent),
+              ),
+              const SizedBox(height: 12),
+              _passwordField(
+                controller: _newPass,
+                label: 'New password',
+                obscure: _obNew,
+                onToggle: () => setState(() => _obNew = !_obNew),
+              ),
+              const SizedBox(height: 12),
+              _passwordField(
+                controller: _confirm,
+                label: 'Confirm new password',
+                obscure: _obConfirm,
+                onToggle: () => setState(() => _obConfirm = !_obConfirm),
+              ),
+              if (_error != null) ...[
+                const SizedBox(height: 12),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.error_outline_rounded,
+                        color: AppColors.danger, size: 16),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(_error!,
+                          style: const TextStyle(
+                              color: AppColors.danger, fontSize: 12)),
+                    ),
+                  ],
+                ),
+              ],
+              const SizedBox(height: 10),
+              const Text(
+                'At least 8 characters with upper, lower, number & special character.',
+                style: TextStyle(color: AppColors.textBody, fontSize: 11),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _loading ? null : _submit,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size.fromHeight(50),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14)),
+                  ),
+                  child: _loading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white))
+                      : const Text('Update Password',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 14)),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 10),
-          TextField(
-            controller: _confirm,
-            obscureText: _obscure,
-            decoration: const InputDecoration(labelText: 'Confirm new password'),
-          ),
-          if (_error != null) ...[
-            const SizedBox(height: 10),
-            Text(_error!,
-                style: const TextStyle(color: AppColors.danger, fontSize: 12)),
-          ],
-          const SizedBox(height: 8),
-          const Text(
-            'At least 8 characters with upper, lower, number & special character.',
-            style: TextStyle(color: AppColors.textBody, fontSize: 10),
-          ),
-        ],
+        ),
       ),
-      actions: [
-        TextButton(
-          onPressed: _loading ? null : () => Navigator.pop(context),
-          child: const Text('Cancel'),
-        ),
-        ElevatedButton(
-          onPressed: _loading ? null : _submit,
-          child: _loading
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(
-                      strokeWidth: 2, color: Colors.white),
-                )
-              : const Text('Update'),
-        ),
-      ],
     );
   }
 }
