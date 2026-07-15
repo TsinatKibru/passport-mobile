@@ -142,10 +142,11 @@ class _BoxesPageState extends State<BoxesPage> {
   // Scan a box QR and drop it into the search (reuses the QR-lookup path).
   void _openScanSearch() {
     bool handled = false;
+    final c = context.colors;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: c.card,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -159,7 +160,7 @@ class _BoxesPageState extends State<BoxesPage> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: AppColors.border,
+                  color: c.border,
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
@@ -167,11 +168,11 @@ class _BoxesPageState extends State<BoxesPage> {
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 child: Text(
                   AppLocalizations.of(context).boxesScanToSearch,
-                  style: const TextStyle(
+                  style: TextStyle(
                       fontFamily: 'Inter',
                       fontWeight: FontWeight.w700,
                       fontSize: 15,
-                      color: AppColors.primaryDark),
+                      color: c.primaryDark),
                 ),
               ),
               Expanded(
@@ -207,8 +208,9 @@ class _BoxesPageState extends State<BoxesPage> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    final c = context.colors;
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: c.surface,
       body: FingerprintBackground(
         child: RefreshIndicator(
           onRefresh: _fetchBoxes,
@@ -220,7 +222,7 @@ class _BoxesPageState extends State<BoxesPage> {
               expandedHeight: 120,
               floating: false,
               pinned: true,
-              backgroundColor: Colors.white,
+              backgroundColor: c.appBar,
               elevation: 0,
               flexibleSpace: FlexibleSpaceBar(
                 titlePadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -230,7 +232,7 @@ class _BoxesPageState extends State<BoxesPage> {
                     fontFamily: 'Inter',
                     fontSize: 20,
                     fontWeight: FontWeight.w800,
-                    color: AppColors.primaryDark,
+                    color: c.primaryDark,
                   ),
                 ),
               ),
@@ -241,14 +243,14 @@ class _BoxesPageState extends State<BoxesPage> {
                     _isGridView
                         ? Icons.view_agenda_outlined
                         : Icons.grid_view_rounded,
-                    color: AppColors.primary,
+                    color: c.primary,
                   ),
                   onPressed: () => setState(() => _isGridView = !_isGridView),
                 ),
                 IconButton(
                   tooltip: l.boxesScanToSearch,
-                  icon: const Icon(Icons.qr_code_scanner_rounded,
-                      color: AppColors.primary),
+                  icon: Icon(Icons.qr_code_scanner_rounded,
+                      color: c.primary),
                   onPressed: _openScanSearch,
                 ),
                 const SizedBox(width: 4),
@@ -264,9 +266,9 @@ class _BoxesPageState extends State<BoxesPage> {
                     // Search box
                     Container(
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: c.card,
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppColors.border),
+                        border: Border.all(color: c.border),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withOpacity(0.02),
@@ -281,7 +283,7 @@ class _BoxesPageState extends State<BoxesPage> {
                         style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                         decoration: InputDecoration(
                           hintText: l.boxesSearchHint,
-                          prefixIcon: const Icon(Icons.search_rounded, color: AppColors.textBody, size: 20),
+                          prefixIcon: Icon(Icons.search_rounded, color: c.textBody, size: 20),
                           suffixIcon: _searchController.text.isNotEmpty
                               ? IconButton(
                                   icon: const Icon(Icons.clear, size: 18),
@@ -334,10 +336,10 @@ class _BoxesPageState extends State<BoxesPage> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.wifi_off_rounded, size: 48, color: AppColors.textBody),
+                        Icon(Icons.wifi_off_rounded, size: 48, color: c.textBody),
                         const SizedBox(height: 16),
                         Text(_errorMessage!, textAlign: TextAlign.center,
-                            style: const TextStyle(color: AppColors.textBody)),
+                            style: TextStyle(color: c.textBody)),
                         const SizedBox(height: 16),
                         ElevatedButton.icon(
                           onPressed: _fetchBoxes,
@@ -356,14 +358,14 @@ class _BoxesPageState extends State<BoxesPage> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(Icons.inventory_2_rounded, size: 64,
-                          color: AppColors.primary.withOpacity(0.15)),
+                          color: c.primary.withOpacity(0.15)),
                       const SizedBox(height: 16),
                       Text(l.boxesNoneFound,
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold,
-                              color: AppColors.primaryDark)),
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold,
+                              color: c.primaryDark)),
                       const SizedBox(height: 4),
                       Text(l.boxesNoneHint,
-                          style: const TextStyle(fontSize: 12, color: AppColors.textBody)),
+                          style: TextStyle(fontSize: 12, color: c.textBody)),
                     ],
                   ),
                 ),
@@ -412,8 +414,8 @@ class _BoxesPageState extends State<BoxesPage> {
                         : (!_hasMore
                             ? Text(
                                 '${_boxes.length} ${_boxes.length == 1 ? l.roomBoxSingular : l.roomBoxPlural}',
-                                style: const TextStyle(
-                                    fontSize: 11, color: AppColors.textBody),
+                                style: TextStyle(
+                                    fontSize: 11, color: c.textBody),
                               )
                             : const SizedBox.shrink()),
                   ),
@@ -429,21 +431,22 @@ class _BoxesPageState extends State<BoxesPage> {
 
   Widget _buildFilterChip(String filter, String label) {
     final isActive = _activeFilter == filter;
+    final c = context.colors;
     return GestureDetector(
       onTap: () => _onFilterChanged(filter),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: isActive ? AppColors.primary : Colors.white,
+          color: isActive ? c.primary : c.card,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isActive ? AppColors.primary : AppColors.border,
+            color: isActive ? c.primary : c.border,
             width: 1,
           ),
           boxShadow: [
             if (isActive)
               BoxShadow(
-                color: AppColors.primary.withOpacity(0.2),
+                color: c.primary.withOpacity(0.2),
                 blurRadius: 8,
                 offset: const Offset(0, 4),
               )
@@ -461,7 +464,7 @@ class _BoxesPageState extends State<BoxesPage> {
             fontFamily: 'Inter',
             fontSize: 11,
             fontWeight: isActive ? FontWeight.bold : FontWeight.w600,
-            color: isActive ? Colors.white : AppColors.textBody,
+            color: isActive ? c.onPrimary : c.textBody,
           ),
         ),
       ),
@@ -484,33 +487,36 @@ class _BoxesPageState extends State<BoxesPage> {
 
   Widget _buildBoxCard(models.Box box) {
     final l = AppLocalizations.of(context);
+    final c = context.colors;
     Color statusColor;
     switch (box.status.toUpperCase()) {
       case 'FULL':
-        statusColor = AppColors.danger;
+        statusColor = c.danger;
         break;
       case 'INACTIVE':
-        statusColor = AppColors.textSecondary;
+        statusColor = c.textSecondary;
         break;
       case 'ACTIVE':
       default:
-        statusColor = AppColors.success;
+        statusColor = c.success;
         break;
     }
 
     final double utilizationPercent = box.capacity > 0 ? (box.occupiedCount / box.capacity) : 0;
-    
+
     // Color of occupancy bar based on how full it is
-    Color utilizationColor = AppColors.success;
+    Color utilizationColor = c.success;
     if (utilizationPercent > 0.85) {
-      utilizationColor = AppColors.danger;
+      utilizationColor = c.danger;
     } else if (utilizationPercent > 0.5) {
-      utilizationColor = AppColors.warning;
+      utilizationColor = c.warning;
     }
 
     return GlassCard(
       padding: const EdgeInsets.all(14.0),
       borderRadius: 16,
+      backgroundColor: c.card,
+      borderColor: c.border,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -524,20 +530,20 @@ class _BoxesPageState extends State<BoxesPage> {
                   children: [
                     Text(
                       box.label,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontFamily: 'Inter',
                         fontSize: 15,
                         fontWeight: FontWeight.w800,
-                        color: AppColors.primaryDark,
+                        color: c.primaryDark,
                       ),
                     ),
                     Text(
                       box.qrCode,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontFamily: 'Courier',
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
-                        color: AppColors.onSurface,
+                        color: c.onSurface,
                       ),
                     ),
                   ],
@@ -568,16 +574,16 @@ class _BoxesPageState extends State<BoxesPage> {
           // Location + occupancy count on one line (no separate label row)
           Row(
             children: [
-              const Icon(Icons.place_rounded, size: 13, color: AppColors.textBody),
+              Icon(Icons.place_rounded, size: 13, color: c.textBody),
               const SizedBox(width: 5),
               Expanded(
                 child: Text(
                   box.location ?? l.boxesUnallocatedSlot,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 11,
                     fontWeight: FontWeight.w500,
-                    color: AppColors.textBody,
+                    color: c.textBody,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -586,11 +592,11 @@ class _BoxesPageState extends State<BoxesPage> {
               const SizedBox(width: 8),
               Text(
                 '${box.occupiedCount}/${box.capacity}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'Inter',
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.primaryDark,
+                  color: c.primaryDark,
                 ),
               ),
             ],
@@ -602,7 +608,7 @@ class _BoxesPageState extends State<BoxesPage> {
             child: LinearProgressIndicator(
               value: utilizationPercent,
               minHeight: 6,
-              backgroundColor: AppColors.border,
+              backgroundColor: c.border,
               valueColor: AlwaysStoppedAnimation<Color>(utilizationColor),
             ),
           ),
@@ -618,8 +624,8 @@ class _BoxesPageState extends State<BoxesPage> {
                   _showBoxDetailSheet(context, box);
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary.withValues(alpha: 0.08),
-                  foregroundColor: AppColors.primary,
+                  backgroundColor: c.primary.withValues(alpha: 0.08),
+                  foregroundColor: c.primary,
                   minimumSize: const Size(0, 30),
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -640,31 +646,34 @@ class _BoxesPageState extends State<BoxesPage> {
   // Compact card for the grid view (2 columns).
   Widget _buildBoxGridCard(models.Box box) {
     final l = AppLocalizations.of(context);
+    final c = context.colors;
     Color statusColor;
     switch (box.status.toUpperCase()) {
       case 'FULL':
-        statusColor = AppColors.danger;
+        statusColor = c.danger;
         break;
       case 'INACTIVE':
-        statusColor = AppColors.textSecondary;
+        statusColor = c.textSecondary;
         break;
       case 'ACTIVE':
       default:
-        statusColor = AppColors.success;
+        statusColor = c.success;
         break;
     }
     final double utilizationPercent =
         box.capacity > 0 ? (box.occupiedCount / box.capacity) : 0;
-    Color utilizationColor = AppColors.success;
+    Color utilizationColor = c.success;
     if (utilizationPercent > 0.85) {
-      utilizationColor = AppColors.danger;
+      utilizationColor = c.danger;
     } else if (utilizationPercent > 0.5) {
-      utilizationColor = AppColors.warning;
+      utilizationColor = c.warning;
     }
 
     return GlassCard(
       padding: const EdgeInsets.all(12.0),
       borderRadius: 16,
+      backgroundColor: c.card,
+      borderColor: c.border,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -675,11 +684,11 @@ class _BoxesPageState extends State<BoxesPage> {
                   box.label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 14,
                     fontWeight: FontWeight.w800,
-                    color: AppColors.primaryDark,
+                    color: c.primaryDark,
                   ),
                 ),
               ),
@@ -696,25 +705,25 @@ class _BoxesPageState extends State<BoxesPage> {
             box.qrCode,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: 'Courier',
               fontSize: 10,
               fontWeight: FontWeight.bold,
-              color: AppColors.onSurface,
+              color: c.onSurface,
             ),
           ),
           const SizedBox(height: 8),
           Row(
             children: [
-              const Icon(Icons.place_rounded, size: 12, color: AppColors.textBody),
+              Icon(Icons.place_rounded, size: 12, color: c.textBody),
               const SizedBox(width: 4),
               Expanded(
                 child: Text(
                   box.location ?? l.boxesUnallocated,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                      fontFamily: 'Inter', fontSize: 10, color: AppColors.textBody),
+                  style: TextStyle(
+                      fontFamily: 'Inter', fontSize: 10, color: c.textBody),
                 ),
               ),
             ],
@@ -733,11 +742,11 @@ class _BoxesPageState extends State<BoxesPage> {
               ),
               Text(
                 '${box.occupiedCount}/${box.capacity}',
-                style: const TextStyle(
+                style: TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.primaryDark),
+                    color: c.primaryDark),
               ),
             ],
           ),
@@ -747,7 +756,7 @@ class _BoxesPageState extends State<BoxesPage> {
             child: LinearProgressIndicator(
               value: utilizationPercent,
               minHeight: 6,
-              backgroundColor: AppColors.border,
+              backgroundColor: c.border,
               valueColor: AlwaysStoppedAnimation<Color>(utilizationColor),
             ),
           ),
@@ -757,8 +766,8 @@ class _BoxesPageState extends State<BoxesPage> {
             child: ElevatedButton(
               onPressed: () => _showBoxDetailSheet(context, box),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary.withValues(alpha: 0.08),
-                foregroundColor: AppColors.primary,
+                backgroundColor: c.primary.withValues(alpha: 0.08),
+                foregroundColor: c.primary,
                 minimumSize: const Size(0, 30),
                 padding: const EdgeInsets.symmetric(horizontal: 8),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -777,8 +786,10 @@ class _BoxesPageState extends State<BoxesPage> {
 
   void _showBoxDetailSheet(BuildContext context, models.Box box) {
     final l = AppLocalizations.of(context);
+    final c = context.colors;
     showModalBottomSheet(
       context: context,
+      backgroundColor: c.card,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
@@ -798,21 +809,21 @@ class _BoxesPageState extends State<BoxesPage> {
                   ),
                   Text(
                     '${box.occupiedCount}/${box.capacity} ${l.boxesSlots}',
-                    style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary),
+                    style: TextStyle(fontWeight: FontWeight.bold, color: c.primary),
                   ),
                 ],
               ),
               const SizedBox(height: 4),
               Text(
                 '${l.boxesLocationLabel}: ${box.location ?? l.boxesDefaultLocation}',
-                style: const TextStyle(color: AppColors.textBody, fontSize: 12),
+                style: TextStyle(color: c.textBody, fontSize: 12),
               ),
               const SizedBox(height: 16),
               const Divider(),
               const SizedBox(height: 12),
               Text(
                 l.boxesPassportsInside,
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: AppColors.textBody, letterSpacing: 0.8),
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: c.textBody, letterSpacing: 0.8),
               ),
               const SizedBox(height: 8),
               // The list endpoint (/boxes) omits the passports array — fetch the
@@ -832,7 +843,7 @@ class _BoxesPageState extends State<BoxesPage> {
                       return Center(
                         child: Text(
                           l.boxesNoPassports,
-                          style: const TextStyle(color: AppColors.textBody, fontSize: 13),
+                          style: TextStyle(color: c.textBody, fontSize: 13),
                         ),
                       );
                     }
@@ -843,8 +854,8 @@ class _BoxesPageState extends State<BoxesPage> {
                         return ListTile(
                           contentPadding: EdgeInsets.zero,
                           leading: CircleAvatar(
-                            backgroundColor: AppColors.primary.withValues(alpha: 0.08),
-                            child: const Icon(Icons.person, color: AppColors.primary, size: 16),
+                            backgroundColor: c.primary.withValues(alpha: 0.08),
+                            child: Icon(Icons.person, color: c.primary, size: 16),
                           ),
                           title: Text(p.holderName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                           subtitle: Text('${l.boxesIdNo}: ${p.holderIdNo} • QR: ${p.qrCode}', style: const TextStyle(fontSize: 11)),
