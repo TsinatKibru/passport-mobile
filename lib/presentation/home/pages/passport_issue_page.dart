@@ -34,6 +34,7 @@ class _PassportIssuePageState extends State<PassportIssuePage> {
   final ScrollController _scrollController = ScrollController();
 
   _StatusFilter _activeFilter = _StatusFilter.inBox;
+  bool _compactView = false;
   String _searchQuery = '';
   List<Passport> _passports = [];
   bool _isLoading = false;
@@ -216,6 +217,8 @@ class _PassportIssuePageState extends State<PassportIssuePage> {
                 onChanged: _setFilter,
                 total: _total,
                 loaded: _passports.length,
+                compactView: _compactView,
+                onToggleView: () => setState(() => _compactView = !_compactView),
               )),
 
               // ── Body ───────────────────────────────────────────────────
@@ -235,28 +238,39 @@ class _PassportIssuePageState extends State<PassportIssuePage> {
                 ))
               else
                 SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 110),
-                  sliver: SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, idx) {
-                        if (idx == _passports.length) {
-                          return _isLoadingMore
-                              ? const _LoadMoreIndicator()
-                              : _hasMore
-                                  ? _LoadMoreButton(onTap: _loadMore)
-                                  : const _EndOfListLabel();
-                        }
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: _PassportCard(
-                            passport: _passports[idx],
-                            onIssue: () => _startIssueVerification(_passports[idx]),
-                          ),
-                        );
-                      },
-                      childCount: _passports.length + 1,
-                    ),
+                  padding: EdgeInsets.fromLTRB(
+                    20, 4, 20, _compactView ? 80 : 110,
                   ),
+                  sliver: _compactView
+                      ? _CompactListSliver(
+                          passports: _passports,
+                          hasMore: _hasMore,
+                          isLoadingMore: _isLoadingMore,
+                          onIssue: _startIssueVerification,
+                          onLoadMore: _loadMore,
+                        )
+                      : SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                            (context, idx) {
+                              if (idx == _passports.length) {
+                                return _isLoadingMore
+                                    ? const _LoadMoreIndicator()
+                                    : _hasMore
+                                        ? _LoadMoreButton(onTap: _loadMore)
+                                        : const _EndOfListLabel();
+                              }
+                              final p = _passports[idx];
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: _PassportCard(
+                                  passport: p,
+                                  onIssue: () => _startIssueVerification(p),
+                                ),
+                              );
+                            },
+                            childCount: _passports.length + 1,
+                          ),
+                        ),
                 ),
             ],
           ),
@@ -335,12 +349,16 @@ class _FilterChipRow extends StatelessWidget {
   final ValueChanged<_StatusFilter> onChanged;
   final int total;
   final int loaded;
+  final bool compactView;
+  final VoidCallback onToggleView;
 
   const _FilterChipRow({
     required this.active,
     required this.onChanged,
     required this.total,
     required this.loaded,
+    required this.compactView,
+    required this.onToggleView,
   });
 
   @override
@@ -368,6 +386,31 @@ class _FilterChipRow extends StatelessWidget {
                 fontWeight: FontWeight.w500,
               ),
             ),
+          const SizedBox(width: 10),
+          // View toggle
+          GestureDetector(
+            onTap: onToggleView,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: compactView
+                    ? AppColors.primary.withValues(alpha: 0.1)
+                    : Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: compactView ? AppColors.primary : AppColors.border,
+                ),
+              ),
+              child: Icon(
+                compactView
+                    ? Icons.view_list_rounded
+                    : Icons.view_agenda_rounded,
+                size: 16,
+                color: compactView ? AppColors.primary : AppColors.textBody,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -612,7 +655,11 @@ class _LocationBreadcrumb extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final parts = box.location?.split(' / ') ?? [];
+    // location = "Building A / Shelf 01 / Row B / Slot 3"
+    // box.label = "Box 001" — always available, shown as the storage unit
+    final locationStr = box.location;
+    final parts = locationStr?.split(' / ') ?? [];
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
@@ -620,14 +667,35 @@ class _LocationBreadcrumb extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: AppColors.border),
       ),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.location_on_rounded, size: 14, color: AppColors.primary),
-          const SizedBox(width: 6),
-          Expanded(
-            child: parts.length > 1
-                ? Wrap(
+          // Box label row
+          Row(
+            children: [
+              const Icon(Icons.inventory_2_outlined, size: 13, color: AppColors.primary),
+              const SizedBox(width: 5),
+              Text(
+                '${box.label}  ·  ${box.qrCode}',
+                style: const TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primaryDark,
+                ),
+              ),
+            ],
+          ),
+          // Full location path
+          if (parts.isNotEmpty) ...[
+            const SizedBox(height: 5),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                const Icon(Icons.location_on_rounded, size: 13, color: AppColors.textHint),
+                const SizedBox(width: 5),
+                Expanded(
+                  child: Wrap(
                     spacing: 2,
                     runSpacing: 2,
                     crossAxisAlignment: WrapCrossAlignment.center,
@@ -639,28 +707,26 @@ class _LocationBreadcrumb extends StatelessWidget {
                             fontFamily: 'Inter',
                             fontSize: 11,
                             fontWeight: i == parts.length - 1
-                                ? FontWeight.w700
+                                ? FontWeight.w600
                                 : FontWeight.w400,
                             color: i == parts.length - 1
-                                ? AppColors.primaryDark
-                                : AppColors.textBody,
+                                ? AppColors.textBody
+                                : AppColors.textHint,
                           ),
                         ),
                         if (i < parts.length - 1)
-                          const Icon(Icons.chevron_right_rounded, size: 12, color: AppColors.textHint),
+                          const Icon(
+                            Icons.chevron_right_rounded,
+                            size: 11,
+                            color: AppColors.textHint,
+                          ),
                       ],
                     ],
-                  )
-                : Text(
-                    box.location ?? box.label,
-                    style: const TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.primaryDark,
-                    ),
                   ),
-          ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -795,6 +861,181 @@ class _EmptyState extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+// ─── Compact row (dense list view) ───────────────────────────────────────────
+class _PassportCompactRow extends StatelessWidget {
+  final Passport passport;
+  final VoidCallback onTap;
+  final bool isLast;
+
+  const _PassportCompactRow({
+    required this.passport,
+    required this.onTap,
+    required this.isLast,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isInBox = passport.status == 'IN_BOX';
+    final statusColor = isInBox ? AppColors.primary : AppColors.warning;
+
+    // Build a short location string: last 2 parts of the path or box label
+    final locationParts = passport.box?.location?.split(' / ') ?? [];
+    final shortLocation = locationParts.length >= 2
+        ? '${locationParts[locationParts.length - 2]} › ${locationParts.last}'
+        : passport.box?.label ?? '—';
+
+    return Material(
+      color: Colors.white,
+      child: InkWell(
+        onTap: isInBox ? onTap : null,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+          child: Row(
+            children: [
+              // Status dot
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: statusColor,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 12),
+              // Name + ID
+              Expanded(
+                flex: 3,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      passport.holderName,
+                      style: const TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.primaryDark,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 1),
+                    Text(
+                      passport.holderIdNo,
+                      style: const TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 11,
+                        color: AppColors.textBody,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Location pill
+              Expanded(
+                flex: 2,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Text(
+                    shortLocation,
+                    style: const TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 10,
+                      color: AppColors.textBody,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Issue icon (only IN_BOX)
+              if (isInBox)
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  size: 16,
+                  color: AppColors.textHint,
+                )
+              else
+                const SizedBox(width: 16),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Compact list wrapper (card with dividers) ────────────────────────────────
+// Note: rows are wrapped in a rounded card by the sliver padding.
+// The dividers are handled via isLast flag on each row.
+class _CompactListSliver extends StatelessWidget {
+  final List<Passport> passports;
+  final bool hasMore;
+  final bool isLoadingMore;
+  final void Function(Passport) onIssue;
+  final VoidCallback onLoadMore;
+
+  const _CompactListSliver({
+    required this.passports,
+    required this.hasMore,
+    required this.isLoadingMore,
+    required this.onIssue,
+    required this.onLoadMore,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SliverList(
+      delegate: SliverChildListDelegate([
+        // All passport rows grouped in one card
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.border),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primaryDark.withValues(alpha: 0.04),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            children: [
+              for (int i = 0; i < passports.length; i++) ...[
+                _PassportCompactRow(
+                  passport: passports[i],
+                  onTap: () => onIssue(passports[i]),
+                  isLast: i == passports.length - 1,
+                ),
+                if (i < passports.length - 1)
+                  const Divider(height: 1, indent: 36, endIndent: 0),
+              ],
+            ],
+          ),
+        ),
+        // Footer
+        if (isLoadingMore)
+          const _LoadMoreIndicator()
+        else if (hasMore)
+          _LoadMoreButton(onTap: onLoadMore)
+        else
+          const _EndOfListLabel(),
+      ]),
     );
   }
 }
