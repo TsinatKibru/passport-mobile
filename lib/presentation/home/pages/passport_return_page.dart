@@ -21,7 +21,7 @@ class _Constants {
   static const int boxPaginationLimit = 15;
   static const double scanReticleWidth = 220;
   static const double scanReticleHeight = 140;
-  static const List<String> stepLabels = ['Scan', 'Select Box', 'Scan Box', 'Scan Slot'];
+  static const List<String> stepLabels = ['Scan', 'Select Box', 'Scan Box'];
 }
 
 class PassportReturnPage extends StatefulWidget {
@@ -63,16 +63,11 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
   bool _isLoadingRooms = false;
   Timer? _searchDebounceTimer;
 
-  // Steps 3 & 4: Two-Step Physical Custody Verification
+  // Step 3: Physical Box Custody Verification
   String? _scannedBoxQr;
-  String? _scannedSlotQr;
   String? _mismatchMessage;
-  bool _isLoadingValidation = false;
-  Map<String, dynamic>? _validationResponse;
-  bool _overrideLocation = false;
 
   final ScrollController _step3ScrollController = ScrollController();
-  final ScrollController _step4ScrollController = ScrollController();
 
   @override
   void initState() {
@@ -84,7 +79,6 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
   void dispose() {
     _boxSearchController.dispose();
     _step3ScrollController.dispose();
-    _step4ScrollController.dispose();
     _searchDebounceTimer?.cancel();
     _scanDebounceTimer?.cancel();
     super.dispose();
@@ -116,8 +110,6 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
     _showFeedback(message, true);
     if (_currentStep == 3 && _step3ScrollController.hasClients) {
       _step3ScrollController.animateTo(0, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
-    } else if (_currentStep == 4 && _step4ScrollController.hasClients) {
-      _step4ScrollController.animateTo(0, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
     }
   }
 
@@ -132,11 +124,6 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
     setState(() {
       _currentStep = step;
       _clearMismatch();
-      if (step < 4) {
-        _scannedSlotQr = null;
-        _validationResponse = null;
-        _overrideLocation = false;
-      }
       if (step < 3) {
         _scannedBoxQr = null;
       }
@@ -341,9 +328,8 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
       setState(() {
         _scannedBoxQr = scannedQr;
         _clearMismatch();
-        _currentStep = 4;
       });
-      _showFeedback('Box QR matches selected box details', false);
+      _showFeedback('Box QR verified', false);
     } else {
       setState(() => _isSubmitting = true);
       try {
@@ -432,7 +418,6 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
                           _selectedBox = scannedBox;
                           _scannedBoxQr = scannedBox.qrCode;
                           _clearMismatch();
-                          _currentStep = 4;
                         });
                         _showFeedback('Switched to physically scanned box: ${scannedBox.label}', false);
                       },
@@ -456,50 +441,10 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
   }
 
   // ============================================================================
-  // STEP 4: SCAN SLOT & CUSTODY VALIDATION
-  // ============================================================================
-  void _onSlotQrScanned(String scannedQr) async {
-    if (_selectedBox == null || _scannedBoxQr == null) return;
-
-    setState(() {
-      _scannedSlotQr = scannedQr;
-      _isLoadingValidation = true;
-      _validationResponse = null;
-      _clearMismatch();
-    });
-
-    try {
-      final res = await _locationRepo.validateReturn(
-        selectedBoxId: _selectedBox!.id,
-        scannedBoxQr: _scannedBoxQr!,
-        scannedSlotQr: scannedQr,
-      );
-
-      setState(() {
-        _validationResponse = res;
-        _isLoadingValidation = false;
-      });
-
-      if (res != null) {
-        final recommendedAction = res['recommendedAction'];
-        final message = res['message'] ?? '';
-        if (recommendedAction == 'RESOLVE_CONFLICTS') {
-          _raiseMismatch(message);
-        } else {
-          _showFeedback(message.isNotEmpty ? message : 'Physical custody validated', false);
-        }
-      }
-    } catch (e) {
-      setState(() => _isLoadingValidation = false);
-      _raiseMismatch('Error validating slot custody layout: $e');
-    }
-  }
-
-  // ============================================================================
   // EXECUTE RETURN SUBMISSION
   // ============================================================================
   Future<void> _executeBatchReturn() async {
-    if (_selectedBox == null || _scannedBoxQr == null || _scannedSlotQr == null) {
+    if (_selectedBox == null || _scannedBoxQr == null) {
       return;
     }
 
@@ -510,8 +455,6 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
       await _passportRepo.batchAssign(
         passportIds: passportIds,
         boxId: _selectedBox!.id,
-        slotQrCode: _scannedSlotQr!,
-        overrideLocation: _overrideLocation,
         action: 'PASSPORT_RETURNED',
       );
 
@@ -631,10 +574,7 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
       _failedQrs.clear();
       _selectedBox = null;
       _scannedBoxQr = null;
-      _scannedSlotQr = null;
       _mismatchMessage = null;
-      _validationResponse = null;
-      _overrideLocation = false;
       _currentStep = 1;
     });
   }
@@ -697,7 +637,7 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 4, 24, 18),
       child: Row(
-        children: List.generate(4, (idx) {
+        children: List.generate(_Constants.stepLabels.length, (idx) {
           final stepNum = idx + 1;
           final isDone = stepNum < _currentStep;
           final isCurrent = stepNum == _currentStep;
@@ -744,7 +684,7 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
                     ),
                   ],
                 ),
-                if (idx < 3)
+                if (idx < _Constants.stepLabels.length - 1)
                   Expanded(
                     child: Padding(
                       padding: const EdgeInsets.only(bottom: 18),
@@ -772,8 +712,6 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
         return _buildStep2();
       case 3:
         return _buildStep3();
-      case 4:
-        return _buildStep4();
       default:
         return const SizedBox();
     }
@@ -1124,6 +1062,7 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
   }
 
   Widget _buildStep3() {
+    final boxVerified = _scannedBoxQr != null;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
       child: SingleChildScrollView(
@@ -1138,42 +1077,77 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
               ),
               const SizedBox(height: 16),
             ],
-            const Text(
-              'Verify Physical Box (Step 1 of 2)',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.primaryDark),
+            Text(
+              boxVerified ? 'Confirm Return' : 'Verify Physical Box',
+              style: const TextStyle(
+                  fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.primaryDark),
             ),
-            const Text(
-              'Scan the QR code on the physical box to verify box custody identity.',
-              style: TextStyle(color: AppColors.textBody, fontSize: 12),
+            Text(
+              boxVerified
+                  ? 'Box verified. Review the details and complete the return.'
+                  : 'Scan the QR code on the physical box to verify box custody identity.',
+              style: const TextStyle(color: AppColors.textBody, fontSize: 12),
             ),
             const SizedBox(height: 16),
-            _buildBoxInfoCard(),
-            const SizedBox(height: 20),
-            SizedBox(
-              height: 280,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(20),
-                child: Stack(
-                  children: [
-                    MobileScanner(
-                      onDetect: (capture) {
-                        final barcode = capture.barcodes.firstOrNull;
-                        if (barcode?.rawValue != null) {
-                          _onBoxQrScanned(barcode!.rawValue!);
-                        }
-                      },
-                    ),
-                    const _ScanReticle(),
-                    const Positioned(
-                      bottom: 16,
-                      left: 0,
-                      right: 0,
-                      child: Center(child: _ScanHint(text: 'Point camera at Box QR code')),
-                    ),
-                  ],
+            if (!boxVerified) ...[
+              _buildBoxInfoCard(),
+              const SizedBox(height: 20),
+              SizedBox(
+                height: 280,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: Stack(
+                    children: [
+                      MobileScanner(
+                        onDetect: (capture) {
+                          final barcode = capture.barcodes.firstOrNull;
+                          if (barcode?.rawValue != null) {
+                            _onBoxQrScanned(barcode!.rawValue!);
+                          }
+                        },
+                      ),
+                      const _ScanReticle(),
+                      const Positioned(
+                        bottom: 16,
+                        left: 0,
+                        right: 0,
+                        child: Center(
+                            child: _ScanHint(text: 'Point camera at Box QR code')),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
+            ] else ...[
+              _buildVerifiedBoxCard(),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _isSubmitting
+                      ? null
+                      : () {
+                          setState(() {
+                            _scannedBoxQr = null;
+                            _clearMismatch();
+                          });
+                        },
+                  icon: const Icon(Icons.qr_code_scanner_rounded, size: 18),
+                  label: const Text('Rescan Box'),
+                ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: _isSubmitting
+                    ? const Center(child: CircularProgressIndicator())
+                    : ElevatedButton(
+                        style: _buttonStyle,
+                        onPressed: _executeBatchReturn,
+                        child: const Text('Complete Return & Assign'),
+                      ),
+              ),
+            ],
           ],
         ),
       ),
@@ -1232,162 +1206,6 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
     );
   }
 
-  Widget _buildStep4() {
-    final validation = _validationResponse;
-    final recommendedAction = validation != null ? validation['recommendedAction'] : null;
-    final message = validation != null ? validation['message'] : null;
-
-    final hasConflict = recommendedAction == 'RESOLVE_CONFLICTS';
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-      child: SingleChildScrollView(
-        controller: _step4ScrollController,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (_mismatchMessage != null) ...[
-              _MismatchBanner(
-                message: _mismatchMessage!,
-                onDismiss: _clearMismatch,
-              ),
-              const SizedBox(height: 16),
-            ],
-            const Text(
-              'Verify Location Slot (Step 2 of 2)',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.primaryDark),
-            ),
-            const Text(
-              'Scan the Slot QR code to confirm final physical custody location.',
-              style: TextStyle(color: AppColors.textBody, fontSize: 12),
-            ),
-            const SizedBox(height: 16),
-            _buildVerifiedBoxCard(),
-            const SizedBox(height: 20),
-            if (_scannedSlotQr == null)
-              SizedBox(
-                height: 240,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(20),
-                  child: Stack(
-                    children: [
-                      MobileScanner(
-                        onDetect: (capture) {
-                          final barcode = capture.barcodes.firstOrNull;
-                          if (barcode?.rawValue != null) {
-                            _onSlotQrScanned(barcode!.rawValue!);
-                          }
-                        },
-                      ),
-                      const _ScanReticle(),
-                      const Positioned(
-                        bottom: 16,
-                        left: 0,
-                        right: 0,
-                        child: Center(child: _ScanHint(text: 'Point camera at Slot QR code')),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            if (_isLoadingValidation) ...[
-              const SizedBox(height: 20),
-              const Center(
-                child: CircularProgressIndicator(),
-              ),
-            ],
-            if (_scannedSlotQr != null && !_isLoadingValidation) ...[
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: (hasConflict ? AppColors.warning : AppColors.success).withOpacity(0.08),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: hasConflict ? AppColors.warning : AppColors.success),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
-                          hasConflict ? Icons.warning_amber_rounded : Icons.check_circle_outline_rounded,
-                          color: hasConflict ? AppColors.warning : AppColors.success,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            hasConflict ? 'Location Conflict Detected' : 'Custody Alignment Safe',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: hasConflict ? AppColors.warning : AppColors.success,
-                            ),
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: () {
-                            setState(() {
-                              _scannedSlotQr = null;
-                              _validationResponse = null;
-                              _overrideLocation = false;
-                              _clearMismatch();
-                            });
-                          },
-                          child: const Text('Rescan Slot'),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      message ?? 'The box and slot are correctly aligned.',
-                      style: const TextStyle(fontSize: 12.5, color: AppColors.primaryDark, height: 1.3),
-                    ),
-                  ],
-                ),
-              ),
-              if (hasConflict) ...[
-                const SizedBox(height: 16),
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: CheckboxListTile(
-                    title: const Text(
-                      'I have verified the physical location and confirm this displacement override.',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primaryDark),
-                    ),
-                    value: _overrideLocation,
-                    activeColor: AppColors.warning,
-                    onChanged: (val) {
-                      setState(() {
-                        _overrideLocation = val ?? false;
-                      });
-                    },
-                  ),
-                ),
-              ],
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: _isSubmitting
-                    ? const Center(child: CircularProgressIndicator())
-                    : ElevatedButton(
-                        style: _buttonStyle,
-                        onPressed: (hasConflict && !_overrideLocation) ? null : _executeBatchReturn,
-                        child: const Text('Complete Return & Assign'),
-                      ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildVerifiedBoxCard() {
     return _FlatCard(
       child: Padding(
@@ -1429,13 +1247,6 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
               'Expected Location: ${_selectedBox!.location ?? "Unassigned"}',
               style: const TextStyle(fontSize: 12, color: AppColors.textBody),
             ),
-            if (_scannedSlotQr != null) ...[
-              const SizedBox(height: 4),
-              Text(
-                'Scanned Slot QR: $_scannedSlotQr',
-                style: const TextStyle(fontSize: 12, color: AppColors.textBody, fontFamily: 'monospace'),
-              ),
-            ],
           ],
         ),
       ),
