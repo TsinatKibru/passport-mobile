@@ -37,7 +37,7 @@ class _FingerprintWatermarkPainter extends CustomPainter {
     final paint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.0
-      ..color = AppColors.primary.withOpacity(0.025); // Extremely subtle
+      ..color = AppColors.primary.withValues(alpha: 0.025); // Extremely subtle
 
     // Draw passport security wavy lines across the screen
     final wavyPath1 = Path();
@@ -114,7 +114,7 @@ class _FingerprintWatermarkPainter extends CustomPainter {
     // Draw Ethiopian geometric micro-patterns at some corners (very subtle star or diamond)
     final starPaint = Paint()
       ..style = PaintingStyle.fill
-      ..color = AppColors.primary.withOpacity(0.015);
+      ..color = AppColors.primary.withValues(alpha: 0.015);
     
     _drawEthiopianStar(canvas, Offset(size.width * 0.5, size.height * 0.4), 60, starPaint);
   }

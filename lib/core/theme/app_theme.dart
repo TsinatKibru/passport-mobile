@@ -38,6 +38,9 @@ abstract class AppColors {
   static const danger = Color(0xFFEF2B2D);        // Ethiopian flag red
   static const onDanger = Color(0xFFFFFFFF);
 
+  // Accent — secondary chart series (e.g. In-vault / Box-moved)
+  static const accentSlate = Color(0xFF5B6B9E);
+
   // Status chips — matches PassportStatus / BoxStatus from schema
   static const statusInBox = Color(0xFF174da7);
   static const statusIssued = Color(0xFF009E60);
