@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/router.dart';
+import 'core/locale_provider.dart';
 import 'core/theme/app_theme.dart';
+import 'l10n/app_localizations.dart';
 
 void main() {
   runApp(
@@ -17,12 +19,16 @@ class MyApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
+    final locale = ref.watch(localeProvider);
 
     return MaterialApp.router(
       title: 'Passport Custody & Tracking',
       theme: AppTheme.light,
       routerConfig: router,
       debugShowCheckedModeBanner: false,
+      locale: locale,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
     );
   }
 }

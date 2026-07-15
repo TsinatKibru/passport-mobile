@@ -1,0 +1,44 @@
+{
+  "@@locale": "en",
+
+  "profileTitle": "My Profile",
+  "accountSettings": "ACCOUNT SETTINGS",
+  "changePassword": "Change Password",
+  "changePasswordDesc": "Update your login password",
+  "appLanguage": "App Language",
+  "aboutSystem": "About System",
+  "aboutSystemDesc": "Version 2.4.1 (Production)",
+  "activityToday": "YOUR ACTIVITY TODAY",
+  "statIssued": "Issued",
+  "statReturned": "Returned",
+  "statBoxMoves": "Box Moves",
+  "metaRole": "ROLE",
+  "metaStatus": "STATUS",
+  "metaMemberSince": "MEMBER SINCE",
+  "statusActive": "Active",
+  "statusInactive": "Inactive",
+  "orgFooter": "IMMIGRATION & CITIZENSHIP SERVICE (ICS)",
+
+  "signOut": "Sign Out",
+  "signOutConfirm": "Are you sure you want to log out of the Passport Custody & Tracking system?",
+  "cancel": "Cancel",
+  "logout": "Logout",
+  "ok": "OK",
+
+  "aboutInfoTitle": "App Information",
+  "aboutInfoBody": "Passport Custody & Tracking Mobile Client\nBuild: 2026.07.13.1\nDepartment: Ministry of Immigration (ICS)",
+
+  "currentPassword": "Current password",
+  "newPassword": "New password",
+  "confirmNewPassword": "Confirm new password",
+  "updatePassword": "Update Password",
+  "passwordUpdated": "Password updated successfully",
+  "passwordRule": "At least 8 characters with upper, lower, number & special character.",
+  "passwordsNoMatch": "New passwords do not match",
+  "fillAllFields": "Please fill in all fields",
+
+  "selectLanguage": "Select Language",
+  "languageEnglish": "English",
+  "languageAmharic": "Amharic",
+  "languageSystem": "System default"
+}

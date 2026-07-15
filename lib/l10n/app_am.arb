@@ -1,0 +1,44 @@
+{
+  "@@locale": "am",
+
+  "profileTitle": "የእኔ መገለጫ",
+  "accountSettings": "የመለያ ቅንብሮች",
+  "changePassword": "የይለፍ ቃል ይቀይሩ",
+  "changePasswordDesc": "የመግቢያ ይለፍ ቃልዎን ያዘምኑ",
+  "appLanguage": "የመተግበሪያ ቋንቋ",
+  "aboutSystem": "ስለ ስርዓቱ",
+  "aboutSystemDesc": "ስሪት 2.4.1 (ምርት)",
+  "activityToday": "የዛሬ እንቅስቃሴዎ",
+  "statIssued": "የተሰጡ",
+  "statReturned": "የተመለሱ",
+  "statBoxMoves": "የሳጥን ዝውውር",
+  "metaRole": "ሚና",
+  "metaStatus": "ሁኔታ",
+  "metaMemberSince": "አባል ከ",
+  "statusActive": "ንቁ",
+  "statusInactive": "ንቁ ያልሆነ",
+  "orgFooter": "የኢሚግሬሽንና ዜግነት አገልግሎት (ICS)",
+
+  "signOut": "መውጣት",
+  "signOutConfirm": "ከፓስፖርት ጥበቃና ክትትል ስርዓት መውጣት ይፈልጋሉ?",
+  "cancel": "ተወው",
+  "logout": "ውጣ",
+  "ok": "እሺ",
+
+  "aboutInfoTitle": "የመተግበሪያ መረጃ",
+  "aboutInfoBody": "የፓስፖርት ጥበቃና ክትትል ሞባይል መተግበሪያ\nግንባታ: 2026.07.13.1\nመምሪያ: የኢሚግሬሽን ሚኒስቴር (ICS)",
+
+  "currentPassword": "የአሁኑ ይለፍ ቃል",
+  "newPassword": "አዲስ ይለፍ ቃል",
+  "confirmNewPassword": "አዲሱን ይለፍ ቃል ያረጋግጡ",
+  "updatePassword": "ይለፍ ቃል አዘምን",
+  "passwordUpdated": "ይለፍ ቃል በተሳካ ሁኔታ ተዘምኗል",
+  "passwordRule": "ቢያንስ 8 ቁምፊዎች፣ በትልቅና ትንሽ ፊደል፣ ቁጥር እና ልዩ ቁምፊ።",
+  "passwordsNoMatch": "አዲሶቹ ይለፍ ቃላት አይዛመዱም",
+  "fillAllFields": "እባክዎ ሁሉንም መስኮች ይሙሉ",
+
+  "selectLanguage": "ቋንቋ ይምረጡ",
+  "languageEnglish": "እንግሊዝኛ",
+  "languageAmharic": "አማርኛ",
+  "languageSystem": "የመሳሪያ ነባሪ"
+}

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/auth_provider.dart';
+import '../../../core/locale_provider.dart';
 import '../../../core/providers/dashboard_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/analytics.dart';
+import '../../../l10n/app_localizations.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/fingerprint_background.dart';
 
@@ -22,7 +24,8 @@ class ProfilePage extends ConsumerWidget {
     final activity = ref
         .watch(myActivityProvider)
         .maybeWhen(data: (v) => v, orElse: () => null);
-    
+    final l = AppLocalizations.of(context);
+
     return Scaffold(
       backgroundColor: AppColors.surface,
       body: FingerprintBackground(
@@ -38,7 +41,7 @@ class ProfilePage extends ConsumerWidget {
               flexibleSpace: FlexibleSpaceBar(
                 titlePadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                 title: Text(
-                  'My Profile',
+                  l.profileTitle,
                   style: TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 20,
@@ -65,18 +68,18 @@ class ProfilePage extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     // Digital Staff ID Card
-                    _buildStaffIdCard(
-                        context, name, email, role, staffId, isActive, memberSince),
+                    _buildStaffIdCard(context, l, name, email, role, staffId,
+                        isActive, memberSince),
                     const SizedBox(height: 24),
 
                     // Stats section
-                    _buildStatsSection(activity),
+                    _buildStatsSection(l, activity),
                     const SizedBox(height: 24),
                     
                     // Options List
-                    const Text(
-                      'ACCOUNT SETTINGS',
-                      style: TextStyle(
+                    Text(
+                      l.accountSettings,
+                      style: const TextStyle(
                         fontFamily: 'Inter',
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
@@ -85,19 +88,26 @@ class ProfilePage extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    
+
                     _buildOptionTile(
                       icon: Icons.lock_outline_rounded,
-                      title: 'Change Password',
-                      subtitle: 'Update your login password',
+                      title: l.changePassword,
+                      subtitle: l.changePasswordDesc,
                       onTap: () => _showChangePasswordDialog(context, ref),
                     ),
                     _buildOptionTile(
+                      icon: Icons.translate_rounded,
+                      title: l.appLanguage,
+                      subtitle: _languageLabel(l, ref.watch(localeProvider)),
+                      onTap: () => _showLanguagePicker(context, ref),
+                    ),
+                    _buildOptionTile(
                       icon: Icons.info_outline_rounded,
-                      title: 'About System',
-                      subtitle: 'Version 2.4.1 (Production)',
+                      title: l.aboutSystem,
+                      subtitle: l.aboutSystemDesc,
                       onTap: () {
-                        _showInfoDialog(context, 'App Information', 'Passport Custody & Tracking Mobile Client\nBuild: 2026.07.13.1\nDepartment: Ministry of Immigration (ICS)');
+                        _showInfoDialog(
+                            context, l.aboutInfoTitle, l.aboutInfoBody);
                       },
                     ),
                     
@@ -105,7 +115,7 @@ class ProfilePage extends ConsumerWidget {
                     
                     // System info footer
                     Text(
-                      'IMMIGRATION & CITIZENSHIP SERVICE (ICS)',
+                      l.orgFooter,
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontFamily: 'Inter',
@@ -126,8 +136,9 @@ class ProfilePage extends ConsumerWidget {
     );
   }
 
-  Widget _buildStaffIdCard(BuildContext context, String name, String email,
-      String role, String staffId, bool isActive, String memberSince) {
+  Widget _buildStaffIdCard(BuildContext context, AppLocalizations l, String name,
+      String email, String role, String staffId, bool isActive,
+      String memberSince) {
     return GlassCard(
       padding: EdgeInsets.zero,
       borderRadius: 24,
@@ -260,9 +271,10 @@ class ProfilePage extends ConsumerWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _buildCardMeta('ROLE', role),
-                    _buildCardMeta('STATUS', isActive ? 'Active' : 'Inactive'),
-                    _buildCardMeta('MEMBER SINCE', memberSince),
+                    _buildCardMeta(l.metaRole, role),
+                    _buildCardMeta(l.metaStatus,
+                        isActive ? l.statusActive : l.statusInactive),
+                    _buildCardMeta(l.metaMemberSince, memberSince),
                   ],
                 ),
               ],
@@ -300,14 +312,14 @@ class ProfilePage extends ConsumerWidget {
     );
   }
 
-  Widget _buildStatsSection(MyActivity? a) {
+  Widget _buildStatsSection(AppLocalizations l, MyActivity? a) {
     String v(int? n) => a == null ? '—' : '${n ?? 0}';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'YOUR ACTIVITY TODAY',
-          style: TextStyle(
+        Text(
+          l.activityToday,
+          style: const TextStyle(
             fontFamily: 'Inter',
             fontSize: 11,
             fontWeight: FontWeight.bold,
@@ -319,17 +331,17 @@ class ProfilePage extends ConsumerWidget {
         Row(
           children: [
             Expanded(
-              child: _buildMiniStatCard('Issued', v(a?.issuedToday),
+              child: _buildMiniStatCard(l.statIssued, v(a?.issuedToday),
                   Icons.assignment_turned_in_rounded, AppColors.success),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: _buildMiniStatCard('Returned', v(a?.returnsToday),
+              child: _buildMiniStatCard(l.statReturned, v(a?.returnsToday),
                   Icons.swap_horizontal_circle_rounded, AppColors.warning),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: _buildMiniStatCard('Box Moves', v(a?.boxMovesToday),
+              child: _buildMiniStatCard(l.statBoxMoves, v(a?.boxMovesToday),
                   Icons.place_rounded, Colors.deepPurple),
             ),
           ],
@@ -437,16 +449,17 @@ class ProfilePage extends ConsumerWidget {
   }
 
   void _showLogoutConfirm(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Sign Out'),
-        content: const Text('Are you sure you want to log out of the Passport Custody & Tracking system?'),
+        title: Text(l.signOut),
+        content: Text(l.signOutConfirm),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(l.cancel),
           ),
           TextButton(
             onPressed: () {
@@ -454,14 +467,80 @@ class ProfilePage extends ConsumerWidget {
               ref.read(authProvider.notifier).logout();
             },
             style: TextButton.styleFrom(foregroundColor: AppColors.danger),
-            child: const Text('Logout', style: TextStyle(fontWeight: FontWeight.bold)),
+            child: Text(l.logout,
+                style: const TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
     );
   }
 
+  String _languageLabel(AppLocalizations l, Locale? locale) {
+    switch (locale?.languageCode) {
+      case 'am':
+        return l.languageAmharic;
+      case 'en':
+        return l.languageEnglish;
+      default:
+        return l.languageSystem;
+    }
+  }
+
+  void _showLanguagePicker(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context);
+    final current = ref.read(localeProvider);
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        Widget option(String label, Locale? value) {
+          final selected = value?.languageCode == current?.languageCode;
+          return ListTile(
+            title: Text(label,
+                style: TextStyle(
+                    fontWeight: selected ? FontWeight.bold : FontWeight.w500)),
+            trailing: selected
+                ? const Icon(Icons.check_rounded, color: AppColors.primary)
+                : null,
+            onTap: () {
+              ref.read(localeProvider.notifier).setLocale(value);
+              Navigator.pop(ctx);
+            },
+          );
+        }
+
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(8, 16, 8, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Text(l.selectLanguage,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: AppColors.primaryDark)),
+                ),
+                const SizedBox(height: 8),
+                option(l.languageEnglish, const Locale('en')),
+                option(l.languageAmharic, const Locale('am')),
+                option(l.languageSystem, null),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   void _showInfoDialog(BuildContext context, String title, String info) {
+    final l = AppLocalizations.of(context);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -471,7 +550,7 @@ class ProfilePage extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
+            child: Text(l.ok),
           ),
         ],
       ),
@@ -538,12 +617,13 @@ class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
   }
 
   Future<void> _submit() async {
+    final l = AppLocalizations.of(context);
     if (_current.text.isEmpty || _newPass.text.isEmpty) {
-      setState(() => _error = 'Please fill in all fields');
+      setState(() => _error = l.fillAllFields);
       return;
     }
     if (_newPass.text != _confirm.text) {
-      setState(() => _error = 'New passwords do not match');
+      setState(() => _error = l.passwordsNoMatch);
       return;
     }
     setState(() {
@@ -603,6 +683,7 @@ class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: SingleChildScrollView(
@@ -639,18 +720,18 @@ class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
                         color: AppColors.primary, size: 20),
                   ),
                   const SizedBox(width: 12),
-                  const Column(
+                  Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Change Password',
-                          style: TextStyle(
+                      Text(l.changePassword,
+                          style: const TextStyle(
                               fontFamily: 'Inter',
                               fontWeight: FontWeight.w700,
                               fontSize: 17,
                               color: AppColors.primaryDark)),
-                      SizedBox(height: 2),
-                      Text('Update your login password',
-                          style: TextStyle(
+                      const SizedBox(height: 2),
+                      Text(l.changePasswordDesc,
+                          style: const TextStyle(
                               fontFamily: 'Inter',
                               fontSize: 12,
                               color: AppColors.textBody)),
@@ -661,21 +742,21 @@ class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
               const SizedBox(height: 20),
               _passwordField(
                 controller: _current,
-                label: 'Current password',
+                label: l.currentPassword,
                 obscure: _obCurrent,
                 onToggle: () => setState(() => _obCurrent = !_obCurrent),
               ),
               const SizedBox(height: 12),
               _passwordField(
                 controller: _newPass,
-                label: 'New password',
+                label: l.newPassword,
                 obscure: _obNew,
                 onToggle: () => setState(() => _obNew = !_obNew),
               ),
               const SizedBox(height: 12),
               _passwordField(
                 controller: _confirm,
-                label: 'Confirm new password',
+                label: l.confirmNewPassword,
                 obscure: _obConfirm,
                 onToggle: () => setState(() => _obConfirm = !_obConfirm),
               ),
@@ -696,9 +777,9 @@ class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
                 ),
               ],
               const SizedBox(height: 10),
-              const Text(
-                'At least 8 characters with upper, lower, number & special character.',
-                style: TextStyle(color: AppColors.textBody, fontSize: 11),
+              Text(
+                l.passwordRule,
+                style: const TextStyle(color: AppColors.textBody, fontSize: 11),
               ),
               const SizedBox(height: 20),
               SizedBox(
@@ -718,8 +799,8 @@ class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
                           height: 20,
                           child: CircularProgressIndicator(
                               strokeWidth: 2, color: Colors.white))
-                      : const Text('Update Password',
-                          style: TextStyle(
+                      : Text(l.updatePassword,
+                          style: const TextStyle(
                               fontWeight: FontWeight.bold, fontSize: 14)),
                 ),
               ),
