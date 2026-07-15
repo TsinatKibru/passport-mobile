@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -14,13 +15,18 @@ import '../widgets/glass_card.dart';
 class ScanPage extends ConsumerStatefulWidget {
   final String? initialMode;
 
-  const ScanPage({super.key, this.initialMode});
+  /// Whether this scan page is the currently-visible tab. The camera only runs
+  /// while active, so it isn't held open behind other tabs in the IndexedStack.
+  final bool isActive;
+
+  const ScanPage({super.key, this.initialMode, this.isActive = true});
 
   @override
   ConsumerState<ScanPage> createState() => _ScanPageState();
 }
 
-class _ScanPageState extends ConsumerState<ScanPage> with SingleTickerProviderStateMixin {
+class _ScanPageState extends ConsumerState<ScanPage>
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   final MobileScannerController _scannerController = MobileScannerController();
   final PassportRepository _passportRepo = PassportRepository();
   final BoxRepository _boxRepo = BoxRepository();
@@ -59,10 +65,40 @@ class _ScanPageState extends ConsumerState<ScanPage> with SingleTickerProviderSt
     _scanLineAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
+
+    // A self-provided MobileScannerController is NOT auto-started by the widget
+    // in mobile_scanner v7 — start it explicitly or the preview stays blank.
+    // Only run it while this tab is active (see didUpdateWidget) so the camera
+    // isn't held open behind other tabs in the IndexedStack.
+    WidgetsBinding.instance.addObserver(this);
+    if (widget.isActive) {
+      unawaited(_scannerController.start());
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant ScanPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isActive != oldWidget.isActive) {
+      unawaited(
+        widget.isActive ? _scannerController.start() : _scannerController.stop(),
+      );
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (!widget.isActive) return;
+    if (state == AppLifecycleState.resumed) {
+      unawaited(_scannerController.start());
+    } else {
+      unawaited(_scannerController.stop());
+    }
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _animationController.dispose();
     _scannerController.dispose();
     _manualController.dispose();

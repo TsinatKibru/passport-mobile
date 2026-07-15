@@ -45,7 +45,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         onOpenScan: _openScan,
       ),
       const TasksPage(),
-      ScanPage(key: ValueKey(_scanMode), initialMode: _scanMode),
+      ScanPage(key: ValueKey(_scanMode), initialMode: _scanMode, isActive: _selectedIndex == 2),
       const BoxesPage(),
       const ProfilePage(),
     ];
