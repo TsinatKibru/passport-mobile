@@ -163,10 +163,11 @@ class _PassportIssuePageState extends State<PassportIssuePage> {
 
   void _showFeedback(String message, bool isError) {
     if (!mounted) return;
+    final c = context.colors;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message, style: const TextStyle(fontWeight: FontWeight.w600)),
-        backgroundColor: isError ? AppColors.danger : AppColors.primary,
+        backgroundColor: isError ? c.danger : c.primary,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
@@ -175,12 +176,13 @@ class _PassportIssuePageState extends State<PassportIssuePage> {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: c.surface,
       body: FingerprintBackground(
         child: RefreshIndicator(
           onRefresh: () => _fetchPassports(refresh: true),
-          color: AppColors.primary,
+          color: c.primary,
           child: CustomScrollView(
             controller: _scrollController,
             slivers: [
@@ -188,18 +190,18 @@ class _PassportIssuePageState extends State<PassportIssuePage> {
               SliverAppBar(
                 pinned: true,
                 floating: false,
-                backgroundColor: Colors.white,
+                backgroundColor: c.appBar,
                 elevation: 0,
                 expandedHeight: 100,
                 flexibleSpace: FlexibleSpaceBar(
                   titlePadding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
                   title: Text(
                     AppLocalizations.of(context).issuePageTitle,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: 'Inter',
                       fontSize: 18,
                       fontWeight: FontWeight.w800,
-                      color: AppColors.primaryDark,
+                      color: c.primaryDark,
                     ),
                   ),
                 ),
@@ -298,16 +300,17 @@ class _SearchBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: c.card,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.border),
+          border: Border.all(color: c.border),
           boxShadow: [
             BoxShadow(
-              color: AppColors.primaryDark.withValues(alpha: 0.04),
+              color: c.primaryDark.withValues(alpha: 0.04),
               blurRadius: 10,
               offset: const Offset(0, 3),
             ),
@@ -323,15 +326,15 @@ class _SearchBar extends StatelessWidget {
           ),
           decoration: InputDecoration(
             hintText: AppLocalizations.of(context).issueSearchHint,
-            hintStyle: const TextStyle(
+            hintStyle: TextStyle(
               fontFamily: 'Inter',
               fontSize: 13,
-              color: AppColors.textHint,
+              color: c.textHint,
             ),
-            prefixIcon: const Icon(Icons.search_rounded, color: AppColors.textBody, size: 20),
+            prefixIcon: Icon(Icons.search_rounded, color: c.textBody, size: 20),
             suffixIcon: controller.text.isNotEmpty
                 ? IconButton(
-                    icon: const Icon(Icons.clear_rounded, size: 18, color: AppColors.textBody),
+                    icon: Icon(Icons.clear_rounded, size: 18, color: c.textBody),
                     onPressed: onClear,
                   )
                 : null,
@@ -368,6 +371,7 @@ class _FilterChipRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    final c = context.colors;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
       child: Row(
@@ -384,10 +388,10 @@ class _FilterChipRow extends StatelessWidget {
           if (loaded > 0)
             Text(
               l.issueLoaded(loaded),
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'Inter',
                 fontSize: 11,
-                color: AppColors.textBody,
+                color: c.textBody,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -400,11 +404,11 @@ class _FilterChipRow extends StatelessWidget {
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
                 color: compactView
-                    ? AppColors.primary.withValues(alpha: 0.1)
-                    : Colors.white,
+                    ? c.primary.withValues(alpha: 0.1)
+                    : c.card,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                  color: compactView ? AppColors.primary : AppColors.border,
+                  color: compactView ? c.primary : c.border,
                 ),
               ),
               child: Icon(
@@ -412,7 +416,7 @@ class _FilterChipRow extends StatelessWidget {
                     ? Icons.view_list_rounded
                     : Icons.view_agenda_rounded,
                 size: 16,
-                color: compactView ? AppColors.primary : AppColors.textBody,
+                color: compactView ? c.primary : c.textBody,
               ),
             ),
           ),
@@ -435,16 +439,17 @@ class _Chip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
         decoration: BoxDecoration(
-          color: isActive ? AppColors.primary : Colors.white,
+          color: isActive ? c.primary : c.card,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isActive ? AppColors.primary : AppColors.border,
+            color: isActive ? c.primary : c.border,
           ),
         ),
         child: Text(
@@ -453,7 +458,7 @@ class _Chip extends StatelessWidget {
             fontFamily: 'Inter',
             fontSize: 12,
             fontWeight: FontWeight.w600,
-            color: isActive ? Colors.white : AppColors.textBody,
+            color: isActive ? c.onPrimary : c.textBody,
           ),
         ),
       ),
@@ -471,18 +476,19 @@ class _PassportCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    final c = context.colors;
     final isInBox = passport.status == 'IN_BOX';
-    final statusColor = isInBox ? AppColors.primary : AppColors.warning;
+    final statusColor = isInBox ? c.primary : c.warning;
     final statusLabel = isInBox ? l.issueFilterInBox : l.issueFilterIssued;
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: c.card,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: c.border),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primaryDark.withValues(alpha: 0.04),
+            color: c.primaryDark.withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, 3),
           ),
@@ -508,20 +514,20 @@ class _PassportCard extends StatelessWidget {
                       children: [
                         Text(
                           passport.holderName,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontFamily: 'Inter',
                             fontSize: 15,
                             fontWeight: FontWeight.w700,
-                            color: AppColors.primaryDark,
+                            color: c.primaryDark,
                           ),
                         ),
                         const SizedBox(height: 2),
                         Text(
                           l.issueIdLabel(passport.holderIdNo),
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontFamily: 'Inter',
                             fontSize: 12,
-                            color: AppColors.textBody,
+                            color: c.textBody,
                           ),
                         ),
                       ],
@@ -548,8 +554,8 @@ class _PassportCard extends StatelessWidget {
                   child: ElevatedButton.icon(
                     onPressed: onIssue,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
+                      backgroundColor: c.primary,
+                      foregroundColor: c.onPrimary,
                       minimumSize: const Size.fromHeight(44),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
@@ -580,6 +586,7 @@ class _Avatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final initials = name.trim().split(' ')
         .where((w) => w.isNotEmpty)
         .take(2)
@@ -589,17 +596,17 @@ class _Avatar extends StatelessWidget {
       width: 44,
       height: 44,
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.1),
+        color: c.primary.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Center(
         child: Text(
           initials,
-          style: const TextStyle(
+          style: TextStyle(
             fontFamily: 'Inter',
             fontSize: 14,
             fontWeight: FontWeight.w800,
-            color: AppColors.primary,
+            color: c.primary,
           ),
         ),
       ),
@@ -639,17 +646,18 @@ class _QrRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Row(
       children: [
-        const Icon(Icons.qr_code_rounded, size: 14, color: AppColors.textHint),
+        Icon(Icons.qr_code_rounded, size: 14, color: c.textHint),
         const SizedBox(width: 6),
         Text(
           qr,
-          style: const TextStyle(
+          style: TextStyle(
             fontFamily: 'JetBrainsMono',
             fontSize: 12,
             fontWeight: FontWeight.w600,
-            color: AppColors.textBody,
+            color: c.textBody,
             letterSpacing: 0.5,
           ),
         ),
@@ -671,15 +679,16 @@ class _LocationBreadcrumb extends StatelessWidget {
   Widget build(BuildContext context) {
     // Prefer the full location path from the passport root field.
     // Fall back to box.location if somehow missing.
+    final c = context.colors;
     final locationStr = fullLocation ?? box.location;
     final parts = locationStr?.split(' / ') ?? [];
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: c.surface,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: c.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -687,15 +696,15 @@ class _LocationBreadcrumb extends StatelessWidget {
           // Box label row
           Row(
             children: [
-              const Icon(Icons.inventory_2_outlined, size: 13, color: AppColors.primary),
+              Icon(Icons.inventory_2_outlined, size: 13, color: c.primary),
               const SizedBox(width: 5),
               Text(
                 '${box.label}  ·  ${box.qrCode}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'Inter',
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.primaryDark,
+                  color: c.primaryDark,
                 ),
               ),
             ],
@@ -706,7 +715,7 @@ class _LocationBreadcrumb extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                const Icon(Icons.location_on_rounded, size: 13, color: AppColors.textHint),
+                Icon(Icons.location_on_rounded, size: 13, color: c.textHint),
                 const SizedBox(width: 5),
                 Expanded(
                   child: Wrap(
@@ -724,15 +733,15 @@ class _LocationBreadcrumb extends StatelessWidget {
                                 ? FontWeight.w600
                                 : FontWeight.w400,
                             color: i == parts.length - 1
-                                ? AppColors.textBody
-                                : AppColors.textHint,
+                                ? c.textBody
+                                : c.textHint,
                           ),
                         ),
                         if (i < parts.length - 1)
-                          const Icon(
+                          Icon(
                             Icons.chevron_right_rounded,
                             size: 11,
-                            color: AppColors.textHint,
+                            color: c.textHint,
                           ),
                       ],
                     ],
@@ -766,6 +775,7 @@ class _LoadMoreButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 16),
       child: Center(
@@ -774,8 +784,8 @@ class _LoadMoreButton extends StatelessWidget {
           icon: const Icon(Icons.expand_more_rounded, size: 16),
           label: Text(AppLocalizations.of(context).issueLoadMore),
           style: OutlinedButton.styleFrom(
-            foregroundColor: AppColors.primary,
-            side: const BorderSide(color: AppColors.primary),
+            foregroundColor: c.primary,
+            side: BorderSide(color: c.primary),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           ),
         ),
@@ -788,15 +798,16 @@ class _EndOfListLabel extends StatelessWidget {
   const _EndOfListLabel();
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 20),
       child: Center(
         child: Text(
           AppLocalizations.of(context).issueEndOfList,
-          style: const TextStyle(
+          style: TextStyle(
             fontFamily: 'Inter',
             fontSize: 12,
-            color: AppColors.textHint,
+            color: c.textHint,
           ),
         ),
       ),
@@ -811,18 +822,19 @@ class _ErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.cloud_off_rounded, size: 56, color: AppColors.textHint),
+            Icon(Icons.cloud_off_rounded, size: 56, color: c.textHint),
             const SizedBox(height: 16),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontFamily: 'Inter', fontSize: 14, color: AppColors.textBody),
+              style: TextStyle(fontFamily: 'Inter', fontSize: 14, color: c.textBody),
             ),
             const SizedBox(height: 20),
             ElevatedButton.icon(
@@ -830,7 +842,7 @@ class _ErrorState extends StatelessWidget {
               icon: const Icon(Icons.refresh_rounded, size: 16),
               label: Text(AppLocalizations.of(context).retry),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
+                backgroundColor: c.primary,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
             ),
@@ -849,6 +861,7 @@ class _EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    final c = context.colors;
     final message = hasSearch
         ? l.issueEmptySearch
         : filter == _StatusFilter.inBox
@@ -862,15 +875,15 @@ class _EmptyState extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.badge_outlined, size: 56, color: AppColors.textHint),
+            Icon(Icons.badge_outlined, size: 56, color: c.textHint),
             const SizedBox(height: 16),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'Inter',
                 fontSize: 14,
-                color: AppColors.textBody,
+                color: c.textBody,
               ),
             ),
           ],
@@ -894,8 +907,9 @@ class _PassportCompactRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final isInBox = passport.status == 'IN_BOX';
-    final statusColor = isInBox ? AppColors.primary : AppColors.warning;
+    final statusColor = isInBox ? c.primary : c.warning;
 
     // Build a short location string: last 2 parts of the path or box label
     final locationParts = (passport.location ?? passport.box?.location)?.split(' / ') ?? [];
@@ -904,7 +918,7 @@ class _PassportCompactRow extends StatelessWidget {
         : passport.box?.label ?? '—';
 
     return Material(
-      color: Colors.white,
+      color: c.card,
       child: InkWell(
         onTap: isInBox ? onTap : null,
         child: Padding(
@@ -929,11 +943,11 @@ class _PassportCompactRow extends StatelessWidget {
                   children: [
                     Text(
                       passport.holderName,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontFamily: 'Inter',
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
-                        color: AppColors.primaryDark,
+                        color: c.primaryDark,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -941,10 +955,10 @@ class _PassportCompactRow extends StatelessWidget {
                     const SizedBox(height: 1),
                     Text(
                       passport.holderIdNo,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontFamily: 'Inter',
                         fontSize: 11,
-                        color: AppColors.textBody,
+                        color: c.textBody,
                       ),
                     ),
                   ],
@@ -957,16 +971,16 @@ class _PassportCompactRow extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                   decoration: BoxDecoration(
-                    color: AppColors.surface,
+                    color: c.surface,
                     borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: AppColors.border),
+                    border: Border.all(color: c.border),
                   ),
                   child: Text(
                     shortLocation,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: 'Inter',
                       fontSize: 10,
-                      color: AppColors.textBody,
+                      color: c.textBody,
                       fontWeight: FontWeight.w500,
                     ),
                     maxLines: 1,
@@ -977,10 +991,10 @@ class _PassportCompactRow extends StatelessWidget {
               const SizedBox(width: 8),
               // Issue icon (only IN_BOX)
               if (isInBox)
-                const Icon(
+                Icon(
                   Icons.chevron_right_rounded,
                   size: 16,
-                  color: AppColors.textHint,
+                  color: c.textHint,
                 )
               else
                 const SizedBox(width: 16),
@@ -1012,17 +1026,18 @@ class _CompactListSliver extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return SliverList(
       delegate: SliverChildListDelegate([
         // All passport rows grouped in one card
         Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: c.card,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.border),
+            border: Border.all(color: c.border),
             boxShadow: [
               BoxShadow(
-                color: AppColors.primaryDark.withValues(alpha: 0.04),
+                color: c.primaryDark.withValues(alpha: 0.04),
                 blurRadius: 10,
                 offset: const Offset(0, 3),
               ),
@@ -1098,10 +1113,11 @@ class _IssueScanSheetState extends State<_IssueScanSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      decoration: BoxDecoration(
+        color: c.card,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
       child: Column(
@@ -1111,27 +1127,27 @@ class _IssueScanSheetState extends State<_IssueScanSheet> {
           Container(
             width: 40, height: 4,
             decoration: BoxDecoration(
-              color: AppColors.border,
+              color: c.border,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
           const SizedBox(height: 20),
           Text(
             AppLocalizations.of(context).issueScanToConfirm,
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: 'Inter',
               fontSize: 18,
               fontWeight: FontWeight.w800,
-              color: AppColors.primaryDark,
+              color: c.primaryDark,
             ),
           ),
           const SizedBox(height: 4),
           Text(
             widget.passport.holderName,
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: 'Inter',
               fontSize: 13,
-              color: AppColors.textBody,
+              color: c.textBody,
             ),
           ),
           const SizedBox(height: 20),
@@ -1148,15 +1164,15 @@ class _IssueScanSheetState extends State<_IssueScanSheet> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
-                color: AppColors.danger.withValues(alpha: 0.08),
+                color: c.danger.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
                 _errorMsg!,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'Inter',
-                  color: AppColors.danger,
+                  color: c.danger,
                   fontWeight: FontWeight.w600,
                   fontSize: 13,
                 ),
@@ -1166,7 +1182,7 @@ class _IssueScanSheetState extends State<_IssueScanSheet> {
             Text(
               AppLocalizations.of(context).issuePointCamera,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: AppColors.textBody),
+              style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: c.textBody),
             ),
           const SizedBox(height: 20),
           SizedBox(
@@ -1174,8 +1190,8 @@ class _IssueScanSheetState extends State<_IssueScanSheet> {
             child: OutlinedButton(
               onPressed: () => Navigator.pop(context),
               style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.textBody,
-                side: const BorderSide(color: AppColors.border),
+                foregroundColor: c.textBody,
+                side: BorderSide(color: c.border),
                 minimumSize: const Size.fromHeight(46),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
