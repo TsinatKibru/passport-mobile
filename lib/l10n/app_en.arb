@@ -350,5 +350,31 @@
   "returnVerifiedBox": "Verified Box: {label}",
   "@returnVerifiedBox": { "placeholders": { "label": {} } },
   "returnReturningCount": "Returning {count} passports",
-  "@returnReturningCount": { "placeholders": { "count": {} } }
+  "@returnReturningCount": { "placeholders": { "count": {} } },
+
+  "navHome": "Home",
+  "navExplorer": "Explorer",
+  "navProfile": "Profile",
+
+  "vaultTitle": "Vault Explorer",
+  "vaultSubtitle": "Browse rooms, shelves & slot inventory",
+  "vaultRooms": "Rooms",
+  "vaultNoRooms": "No Rooms Configured",
+  "vaultNoShelves": "No Shelves Configured",
+  "vaultNoRows": "No Rows Configured",
+  "vaultNoSlots": "No Slots Configured",
+  "vaultOccupied": "Occupied:",
+  "vaultEmptySlot": "EMPTY SLOT",
+  "vaultContainedPassports": "Contained Passports",
+  "vaultNoPassportsInside": "No passports inside this box",
+  "vaultShelvesCount": "{count} Shelves",
+  "@vaultShelvesCount": { "placeholders": { "count": {} } },
+  "vaultRowsCount": "{count} Rows",
+  "@vaultRowsCount": { "placeholders": { "count": {} } },
+  "vaultSlotsCount": "{count} Slots",
+  "@vaultSlotsCount": { "placeholders": { "count": {} } },
+  "vaultPosition": "Position {position}",
+  "@vaultPosition": { "placeholders": { "position": {} } },
+  "vaultQrLabel": "QR: {qr}",
+  "@vaultQrLabel": { "placeholders": { "qr": {} } }
 }

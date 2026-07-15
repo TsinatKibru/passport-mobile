@@ -6,6 +6,22 @@ import '../../../data/repositories/location_repository.dart';
 import '../../../data/repositories/box_repository.dart';
 import '../../../data/models/room.dart' as room_models;
 import '../../../data/models/box.dart' as box_models;
+import '../../../l10n/app_localizations.dart';
+
+// Localised labels for backend status enums (no BuildContext on the models).
+String _boxStatusLabel(AppLocalizations l, String status) => switch (status.toUpperCase()) {
+  'FULL'     => l.boxStatusFull,
+  'INACTIVE' => l.boxStatusInactive,
+  'ACTIVE'   => l.boxStatusActive,
+  _          => status,
+};
+
+String _passportStatusLabel(AppLocalizations l, String status) => switch (status.toUpperCase()) {
+  'ISSUED'   => l.psIssued,
+  'IN_BOX'   => l.psInBox,
+  'RETURNED' => l.psReturned,
+  _          => status,
+};
 
 class TasksPage extends StatefulWidget {
   const TasksPage({super.key});
@@ -132,6 +148,7 @@ class _TasksPageState extends State<TasksPage> {
   }
 
   Widget _buildHeader() {
+    final l = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
       child: Row(
@@ -140,11 +157,11 @@ class _TasksPageState extends State<TasksPage> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Vault Explorer',
+              Text(l.vaultTitle,
                   style: TextStyle(fontFamily: 'Inter', fontSize: 24,
                       fontWeight: FontWeight.w800, color: AppColors.primaryDark)),
               const SizedBox(height: 4),
-              Text('Browse rooms, shelves & slot inventory',
+              Text(l.vaultSubtitle,
                   style: TextStyle(fontFamily: 'Inter', fontSize: 12,
                       color: AppColors.textBody.withOpacity(0.7))),
             ],
@@ -163,7 +180,7 @@ class _TasksPageState extends State<TasksPage> {
     final crumbs = <Widget>[
       GestureDetector(
         onTap: _loadRooms,
-        child: Text('Rooms',
+        child: Text(AppLocalizations.of(context).vaultRooms,
             style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 13)),
       ),
     ];
@@ -217,7 +234,8 @@ class _TasksPageState extends State<TasksPage> {
   }
 
   Widget _buildRoomsGrid() {
-    if (_rooms.isEmpty) return _emptyState('No Rooms Configured');
+    final l = AppLocalizations.of(context);
+    if (_rooms.isEmpty) return _emptyState(l.vaultNoRooms);
     return GridView.builder(
       key: const ValueKey('rooms'),
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
@@ -244,7 +262,7 @@ class _TasksPageState extends State<TasksPage> {
                   Text(room.name, style: const TextStyle(
                       fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.primaryDark)),
                   const SizedBox(height: 4),
-                  Text('${room.shelfCount ?? 0} Shelves',
+                  Text(l.vaultShelvesCount(room.shelfCount ?? 0),
                       style: TextStyle(fontSize: 12, color: AppColors.textBody.withOpacity(0.6))),
                 ]),
               ],
@@ -256,7 +274,8 @@ class _TasksPageState extends State<TasksPage> {
   }
 
   Widget _buildShelvesList() {
-    if (_shelves.isEmpty) return _emptyState('No Shelves Configured');
+    final l = AppLocalizations.of(context);
+    if (_shelves.isEmpty) return _emptyState(l.vaultNoShelves);
     return ListView.builder(
       key: const ValueKey('shelves'),
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
@@ -274,9 +293,9 @@ class _TasksPageState extends State<TasksPage> {
                 const SizedBox(width: 16),
                 Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(shelf.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.primaryDark)),
-                  Text('Position ${shelf.position}', style: TextStyle(fontSize: 12, color: AppColors.textBody.withOpacity(0.5))),
+                  Text(l.vaultPosition(shelf.position), style: TextStyle(fontSize: 12, color: AppColors.textBody.withOpacity(0.5))),
                 ])),
-                _badge('${shelf.rowCount ?? 0} Rows'),
+                _badge(l.vaultRowsCount(shelf.rowCount ?? 0)),
                 const SizedBox(width: 8),
                 const Icon(Icons.chevron_right_rounded, color: AppColors.textBody, size: 20),
               ]),
@@ -288,7 +307,8 @@ class _TasksPageState extends State<TasksPage> {
   }
 
   Widget _buildRowsList() {
-    if (_rows.isEmpty) return _emptyState('No Rows Configured');
+    final l = AppLocalizations.of(context);
+    if (_rows.isEmpty) return _emptyState(l.vaultNoRows);
     return ListView.builder(
       key: const ValueKey('rows'),
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
@@ -306,9 +326,9 @@ class _TasksPageState extends State<TasksPage> {
                 const SizedBox(width: 16),
                 Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(row.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.primaryDark)),
-                  Text('Position ${row.position}', style: TextStyle(fontSize: 12, color: AppColors.textBody.withOpacity(0.5))),
+                  Text(l.vaultPosition(row.position), style: TextStyle(fontSize: 12, color: AppColors.textBody.withOpacity(0.5))),
                 ])),
-                _badge('${row.slotCount ?? 0} Slots'),
+                _badge(l.vaultSlotsCount(row.slotCount ?? 0)),
                 const SizedBox(width: 8),
                 const Icon(Icons.chevron_right_rounded, color: AppColors.textBody, size: 20),
               ]),
@@ -320,7 +340,8 @@ class _TasksPageState extends State<TasksPage> {
   }
 
   Widget _buildSlotsGrid() {
-    if (_slots.isEmpty) return _emptyState('No Slots Configured');
+    final l = AppLocalizations.of(context);
+    if (_slots.isEmpty) return _emptyState(l.vaultNoSlots);
     return GridView.builder(
       key: const ValueKey('slots'),
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
@@ -354,7 +375,7 @@ class _TasksPageState extends State<TasksPage> {
                     color: (box.status == 'FULL' ? Colors.red : AppColors.success).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Text(box.status,
+                  child: Text(_boxStatusLabel(l, box.status),
                       style: TextStyle(color: box.status == 'FULL' ? Colors.red : AppColors.success,
                           fontWeight: FontWeight.bold, fontSize: 9)),
                 ),
@@ -373,13 +394,13 @@ class _TasksPageState extends State<TasksPage> {
                 ),
                 const SizedBox(height: 6),
                 Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                  Text('Occupied:', style: TextStyle(fontSize: 10, color: AppColors.textBody.withOpacity(0.5))),
+                  Text(l.vaultOccupied, style: TextStyle(fontSize: 10, color: AppColors.textBody.withOpacity(0.5))),
                   Text('${box.occupiedCount}/${box.capacity}',
                       style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.primaryDark)),
                 ]),
               ] else
-                const Center(child: Text('EMPTY SLOT',
-                    style: TextStyle(fontSize: 11, color: AppColors.textBody, fontWeight: FontWeight.bold, letterSpacing: 0.5))),
+                Center(child: Text(l.vaultEmptySlot,
+                    style: const TextStyle(fontSize: 11, color: AppColors.textBody, fontWeight: FontWeight.bold, letterSpacing: 0.5))),
             ]),
           ),
         );
@@ -474,6 +495,7 @@ class _BoxDetailsSheetState extends State<_BoxDetailsSheet> {
   }
 
   Widget _buildContent() {
+    final l = AppLocalizations.of(context);
     final box = _box!;
     final passports = box.passports ?? [];
     return Padding(
@@ -482,7 +504,7 @@ class _BoxDetailsSheetState extends State<_BoxDetailsSheet> {
         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
           Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(box.label, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.primaryDark)),
-            Text('QR: ${box.qrCode}', style: const TextStyle(fontSize: 12, color: AppColors.textBody)),
+            Text(l.vaultQrLabel(box.qrCode), style: const TextStyle(fontSize: 12, color: AppColors.textBody)),
           ]),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -500,20 +522,20 @@ class _BoxDetailsSheetState extends State<_BoxDetailsSheet> {
           child: Row(children: [
             const Icon(Icons.location_on_rounded, color: AppColors.primary, size: 20),
             const SizedBox(width: 12),
-            Expanded(child: Text(box.location ?? 'Unassigned Location',
+            Expanded(child: Text(box.location ?? l.returnUnassignedLocation,
                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.primaryDark))),
           ]),
         ),
         const SizedBox(height: 24),
-        const Text('Contained Passports',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primaryDark)),
+        Text(l.vaultContainedPassports,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primaryDark)),
         const SizedBox(height: 12),
         Expanded(
           child: passports.isEmpty
-              ? const Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  Icon(Icons.assignment_turned_in_rounded, size: 48, color: Color(0x33000000)),
-                  SizedBox(height: 12),
-                  Text('No passports inside this box', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textBody)),
+              ? Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  const Icon(Icons.assignment_turned_in_rounded, size: 48, color: Color(0x33000000)),
+                  const SizedBox(height: 12),
+                  Text(l.vaultNoPassportsInside, style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textBody)),
                 ]))
               : ListView.builder(
                   itemCount: passports.length,
@@ -532,13 +554,13 @@ class _BoxDetailsSheetState extends State<_BoxDetailsSheet> {
                         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                           Text(p.holderName,
                               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.primaryDark)),
-                          Text('ID: ${p.holderIdNo}',
+                          Text(l.issueIdLabel(p.holderIdNo),
                               style: TextStyle(fontSize: 11, color: AppColors.textBody.withOpacity(0.6))),
                         ])),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(color: AppColors.success.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
-                          child: Text(p.status,
+                          child: Text(_passportStatusLabel(l, p.status),
                               style: const TextStyle(color: AppColors.success, fontWeight: FontWeight.bold, fontSize: 10)),
                         ),
                       ]),

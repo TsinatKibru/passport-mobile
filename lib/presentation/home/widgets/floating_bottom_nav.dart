@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../l10n/app_localizations.dart';
 
 class FloatingBottomNav extends StatelessWidget {
   final int selectedIndex;
@@ -14,6 +15,7 @@ class FloatingBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return SafeArea(
       child: Container(
         height: 72,
@@ -46,12 +48,12 @@ class FloatingBottomNav extends StatelessWidget {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      _buildNavItem(0, Icons.grid_view_rounded, 'Home'),
-                      _buildNavItem(1, Icons.explore_outlined, 'Explorer'),
+                      _buildNavItem(0, Icons.grid_view_rounded, l.navHome),
+                      _buildNavItem(1, Icons.explore_outlined, l.navExplorer),
                       // Placeholder space for center button
                       const SizedBox(width: 56),
-                      _buildNavItem(3, Icons.inventory_2_outlined, 'Boxes'),
-                      _buildNavItem(4, Icons.person_outline_rounded, 'Profile'),
+                      _buildNavItem(3, Icons.inventory_2_outlined, l.dashBoxes),
+                      _buildNavItem(4, Icons.person_outline_rounded, l.navProfile),
                     ],
                   ),
                 ),

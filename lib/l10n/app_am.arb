@@ -293,5 +293,26 @@
   "returnExpectedQr": "የሚጠበቀው QR ኮድ፦ {qr}",
   "returnExpectedLocation": "የሚጠበቀው አካባቢ፦ {location}",
   "returnVerifiedBox": "የተረጋገጠ ሳጥን፦ {label}",
-  "returnReturningCount": "{count} ፓስፖርቶች እየተመለሱ ነው"
+  "returnReturningCount": "{count} ፓስፖርቶች እየተመለሱ ነው",
+
+  "navHome": "መነሻ",
+  "navExplorer": "አሳሽ",
+  "navProfile": "መገለጫ",
+
+  "vaultTitle": "የካዝና አሳሽ",
+  "vaultSubtitle": "ክፍሎችን፣ መደርደሪያዎችን እና የቦታ ዝርዝርን ያስሱ",
+  "vaultRooms": "ክፍሎች",
+  "vaultNoRooms": "ምንም ክፍሎች አልተዋቀሩም",
+  "vaultNoShelves": "ምንም መደርደሪያዎች አልተዋቀሩም",
+  "vaultNoRows": "ምንም ረድፎች አልተዋቀሩም",
+  "vaultNoSlots": "ምንም ቦታዎች አልተዋቀሩም",
+  "vaultOccupied": "ተይዟል፦",
+  "vaultEmptySlot": "ባዶ ቦታ",
+  "vaultContainedPassports": "የያዛቸው ፓስፖርቶች",
+  "vaultNoPassportsInside": "በዚህ ሳጥን ውስጥ ፓስፖርት የለም",
+  "vaultShelvesCount": "{count} መደርደሪያዎች",
+  "vaultRowsCount": "{count} ረድፎች",
+  "vaultSlotsCount": "{count} ቦታዎች",
+  "vaultPosition": "ቦታ {position}",
+  "vaultQrLabel": "QR፦ {qr}"
 }
