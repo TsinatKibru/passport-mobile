@@ -3,8 +3,12 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../data/models/analytics.dart';
 
+/// Width reserved on the left of the plot for the Y-axis value labels.
+const double _kYAxisWidth = 26.0;
+
 /// Area + line chart of daily total activity, drawn with a CustomPainter.
-/// Shows one point per day with weekday labels beneath. No dependencies.
+/// Shows one point per day with weekday labels beneath and Y-axis value labels
+/// on the left. No dependencies.
 class ActivityTrendChart extends StatelessWidget {
   final List<ActivityTrendPoint> points;
   final double height;
@@ -40,17 +44,22 @@ class ActivityTrendChart extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 6),
-          Row(
-            children: [
-              for (final p in points)
-                Expanded(
-                  child: Text(
-                    p.shortLabel,
-                    textAlign: TextAlign.center,
-                    style: AppTextStyles.caption.copyWith(fontSize: 9),
+          // Offset the day labels by the Y-axis width so they line up under the
+          // plotted points.
+          Padding(
+            padding: const EdgeInsets.only(left: _kYAxisWidth),
+            child: Row(
+              children: [
+                for (final p in points)
+                  Expanded(
+                    child: Text(
+                      p.shortLabel,
+                      textAlign: TextAlign.center,
+                      style: AppTextStyles.caption.copyWith(fontSize: 9),
+                    ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
@@ -65,25 +74,35 @@ class _TrendPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final values = points.map((p) => p.total.toDouble()).toList();
-    final maxV = math.max(1.0, values.fold<double>(0, math.max));
+    final rawMax = values.fold<double>(0, math.max);
+    // Round up to a "nice" even ceiling (min 2) so the mid-axis label is a
+    // whole number and the line keeps a little headroom below the top.
+    final ceil = rawMax.ceil();
+    final maxV = (ceil < 2 ? 2 : (ceil.isEven ? ceil : ceil + 1)).toDouble();
+
     final n = values.length;
-    const padTop = 10.0;
-    final usableH = size.height - padTop;
-    final dx = n > 1 ? size.width / (n - 1) : 0.0;
+    const padTop = 8.0;
+    const padBottom = 6.0;
+    const leftPad = _kYAxisWidth;
+    final usableH = size.height - padTop - padBottom;
+    final plotW = size.width - leftPad;
+    final dx = n > 1 ? plotW / (n - 1) : 0.0;
 
     Offset pointAt(int i) {
-      final x = n > 1 ? i * dx : size.width / 2;
+      final x = n > 1 ? leftPad + i * dx : leftPad + plotW / 2;
       final y = padTop + usableH * (1 - values[i] / maxV);
       return Offset(x, y);
     }
 
-    // Faint horizontal gridlines for a clean line-graph feel
+    // Horizontal gridlines + Y-axis value labels (top = maxV, mid, 0).
     final grid = Paint()
       ..color = AppColors.border
       ..strokeWidth = 1;
     for (int g = 0; g <= 2; g++) {
       final y = padTop + usableH * (g / 2);
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), grid);
+      canvas.drawLine(Offset(leftPad, y), Offset(size.width, y), grid);
+      final labelValue = (maxV * (1 - g / 2)).round();
+      _drawYLabel(canvas, '$labelValue', y, leftPad - 5, size.height);
     }
 
     final pts = [for (int i = 0; i < n; i++) pointAt(i)];
@@ -115,7 +134,7 @@ class _TrendPainter extends CustomPainter {
           AppColors.primary.withValues(alpha: 0.10),
           AppColors.primary.withValues(alpha: 0.0),
         ],
-      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
+      ).createShader(Rect.fromLTWH(leftPad, 0, plotW, size.height));
     canvas.drawPath(area, areaPaint);
 
     // Smooth line stroke
@@ -134,6 +153,25 @@ class _TrendPainter extends CustomPainter {
       canvas.drawCircle(p, 3.2, dot);
       canvas.drawCircle(p, 1.5, dotInner);
     }
+  }
+
+  /// Draws a right-aligned Y-axis label centred (vertically) on [centerY],
+  /// clamped so the top/bottom labels stay within the canvas.
+  void _drawYLabel(
+      Canvas canvas, String text, double centerY, double rightX, double maxH) {
+    final tp = TextPainter(
+      text: TextSpan(
+        text: text,
+        style: const TextStyle(
+          fontFamily: 'Inter',
+          fontSize: 9,
+          color: AppColors.textBody,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    final top = (centerY - tp.height / 2).clamp(0.0, maxH - tp.height);
+    tp.paint(canvas, Offset(rightX - tp.width, top));
   }
 
   @override
