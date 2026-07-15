@@ -19,7 +19,9 @@ class ProfilePage extends ConsumerWidget {
     final staffId = user?.id.substring(0, 8).toUpperCase() ?? 'ICS-94827';
     final isActive = user?.isActive ?? true;
     final memberSince = _formatMonthYear(user?.createdAt);
-    final activity = ref.watch(myActivityProvider).valueOrNull;
+    final activity = ref
+        .watch(myActivityProvider)
+        .maybeWhen(data: (v) => v, orElse: () => null);
     
     return Scaffold(
       backgroundColor: AppColors.surface,
