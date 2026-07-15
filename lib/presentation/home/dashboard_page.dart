@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/providers/dashboard_provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/models/dashboard_stats.dart';
+import '../../l10n/app_localizations.dart';
 import 'widgets/fingerprint_background.dart';
 import 'widgets/dashboard_header.dart';
 import 'widgets/activity_card.dart';
@@ -25,6 +26,7 @@ class DashboardPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final statsAsync = ref.watch(dashboardStatsProvider);
+    final l = AppLocalizations.of(context);
     final int pendingCount =
         statsAsync.maybeWhen(data: (s) => s?.inBox ?? 0, orElse: () => 0);
 
@@ -61,11 +63,10 @@ class DashboardPage extends ConsumerWidget {
                     // Storage overview hero
                     statsAsync.when(
                       data: (stats) => stats == null
-                          ? const _InfoCard('Overview unavailable')
+                          ? _InfoCard(l.dashOverviewUnavailable)
                           : _HeroCard(stats: stats),
                       loading: () => const _HeroSkeleton(),
-                      error: (_, __) =>
-                          const _InfoCard('Failed to load overview'),
+                      error: (_, __) => _InfoCard(l.dashOverviewFailed),
                     ),
                     const SizedBox(height: 22),
 
@@ -110,6 +111,7 @@ class DashboardPage extends ConsumerWidget {
   }
 
   void _showNotificationsSheet(BuildContext context) {
+    final l = AppLocalizations.of(context);
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
@@ -132,8 +134,8 @@ class DashboardPage extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 18),
-            const Text('Notifications',
-                style: TextStyle(
+            Text(l.dashNotifications,
+                style: const TextStyle(
                     fontFamily: 'Inter',
                     fontWeight: FontWeight.w700,
                     fontSize: 17,
@@ -142,15 +144,15 @@ class DashboardPage extends ConsumerWidget {
             _NotifRow(
               icon: Icons.warning_amber_rounded,
               color: AppColors.warning,
-              title: 'Box Capacity Alert',
-              body: 'Box MB-002 is at 100% capacity. Assign a new target.',
+              title: l.notifCapacityTitle,
+              body: l.notifCapacityBody,
             ),
             const Divider(height: 20),
             _NotifRow(
               icon: Icons.inbox_rounded,
               color: AppColors.primary,
-              title: 'New Batch Pending',
-              body: '12 ePassports scanned at Reception A awaiting assignment.',
+              title: l.notifBatchTitle,
+              body: l.notifBatchBody,
             ),
           ],
         ),
@@ -169,6 +171,7 @@ class _HeroCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final occ = stats.totalCapacity > 0
         ? (stats.totalOccupied / stats.totalCapacity * 100)
         : 0.0;
@@ -216,7 +219,7 @@ class _HeroCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'ORGANISED STORAGE',
+                      l.dashOrganisedStorage,
                       style: AppTextStyles.labelSmall.copyWith(
                         color: Colors.white.withValues(alpha: 0.7),
                         letterSpacing: 1.2,
@@ -237,7 +240,7 @@ class _HeroCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'passports in custody',
+                      l.dashPassportsInCustody,
                       style: AppTextStyles.bodyMedium.copyWith(
                         color: Colors.white.withValues(alpha: 0.75),
                       ),
@@ -269,7 +272,7 @@ class _HeroCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'in use',
+                      l.dashInUse,
                       style: TextStyle(
                         fontFamily: 'Inter',
                         fontSize: 8,
@@ -289,17 +292,17 @@ class _HeroCard extends StatelessWidget {
               _HeroStat(
                   icon: Icons.shield_rounded,
                   value: '${stats.inBox}',
-                  label: 'In vault'),
+                  label: l.dashInVault),
               const _HeroDivider(),
               _HeroStat(
                   icon: Icons.import_contacts_rounded,
                   value: '${stats.issued}',
-                  label: 'Issued'),
+                  label: l.dashIssued),
               const _HeroDivider(),
               _HeroStat(
                   icon: Icons.inventory_2_rounded,
                   value: '${stats.totalBoxes}',
-                  label: 'Boxes'),
+                  label: l.dashBoxes),
             ],
           ),
         ],
@@ -412,13 +415,14 @@ class _QuickActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Row(
       children: [
         Expanded(
           child: _QuickAction(
               icon: Icons.import_contacts_rounded,
-              label: 'Issue',
-              subtitle: 'New passport',
+              label: l.qaIssue,
+              subtitle: l.qaIssueSub,
               color: AppColors.danger,
               onTap: onIssue),
         ),
@@ -426,8 +430,8 @@ class _QuickActions extends StatelessWidget {
         Expanded(
           child: _QuickAction(
               icon: Icons.assignment_return_rounded,
-              label: 'Return',
-              subtitle: 'Return passport',
+              label: l.qaReturn,
+              subtitle: l.qaReturnSub,
               color: AppColors.warning,
               onTap: onReturn),
         ),
@@ -435,8 +439,8 @@ class _QuickActions extends StatelessWidget {
         Expanded(
           child: _QuickAction(
               icon: Icons.person_add_alt_1_rounded,
-              label: 'Assign',
-              subtitle: 'Assign to user',
+              label: l.qaAssign,
+              subtitle: l.qaAssignSub,
               color: AppColors.primary,
               onTap: onAssign),
         ),
@@ -444,8 +448,8 @@ class _QuickActions extends StatelessWidget {
         Expanded(
           child: _QuickAction(
               icon: Icons.verified_user_rounded,
-              label: 'Verify',
-              subtitle: 'Verify passport',
+              label: l.qaVerify,
+              subtitle: l.qaVerifySub,
               color: AppColors.success,
               onTap: onVerify),
         ),
@@ -595,10 +599,11 @@ class _TrendCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context);
     final async = ref.watch(activityTrendProvider);
     return _SectionCard(
-      title: 'Activity',
-      trailing: 'last 7 days',
+      title: l.dashActivity,
+      trailing: l.dashLast7Days,
       child: async.when(
         data: (points) {
           final total = points.fold<int>(0, (s, p) => s + p.total);
@@ -622,7 +627,7 @@ class _TrendCard extends ConsumerWidget {
                   Padding(
                     padding: const EdgeInsets.only(bottom: 3),
                     child: Text(
-                      'movements',
+                      l.dashMovements,
                       style: AppTextStyles.caption.copyWith(color: AppColors.textBody),
                     ),
                   ),
@@ -634,7 +639,7 @@ class _TrendCard extends ConsumerWidget {
           );
         },
         loading: () => const _CardLoader(),
-        error: (_, __) => const _CardError('Could not load activity'),
+        error: (_, __) => _CardError(l.dashCouldNotLoadActivity),
       ),
     );
   }
@@ -650,9 +655,10 @@ class _StatusCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return _SectionCard(
-      title: 'Passport status',
-      trailing: '${stats.totalPassports} total',
+      title: l.dashPassportStatus,
+      trailing: '${stats.totalPassports} ${l.dashTotal}',
       child: Row(
         children: [
           DonutChart(
@@ -675,7 +681,7 @@ class _StatusCard extends StatelessWidget {
                     height: 1,
                   ),
                 ),
-                Text('total', style: AppTextStyles.caption.copyWith(fontSize: 9)),
+                Text(l.dashTotal, style: AppTextStyles.caption.copyWith(fontSize: 9)),
               ],
             ),
           ),
@@ -684,10 +690,10 @@ class _StatusCard extends StatelessWidget {
             child: Column(
               children: [
                 _LegendRow(
-                    color: AppColors.primary, label: 'In vault', value: stats.inBox),
+                    color: AppColors.primary, label: l.dashInVault, value: stats.inBox),
                 const SizedBox(height: 12),
                 _LegendRow(
-                    color: AppColors.success, label: 'Issued', value: stats.issued),
+                    color: AppColors.success, label: l.dashIssued, value: stats.issued),
               ],
             ),
           ),
@@ -738,17 +744,18 @@ class _RoomCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context);
     final async = ref.watch(roomOccupancyProvider);
     return _SectionCard(
-      title: 'Storage by room',
+      title: l.dashStorageByRoom,
       trailing: async.maybeWhen(
-        data: (r) => '${r.length} ${r.length == 1 ? 'room' : 'rooms'}',
+        data: (r) => '${r.length} ${r.length == 1 ? l.dashRoom : l.dashRooms}',
         orElse: () => null,
       ),
       child: async.when(
         data: (rooms) => RoomOccupancyBars(rooms: rooms),
         loading: () => const _CardLoader(),
-        error: (_, __) => const _CardError('Could not load rooms'),
+        error: (_, __) => _CardError(l.dashCouldNotLoadRooms),
       ),
     );
   }
@@ -763,15 +770,16 @@ class _RecentActivity extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context);
     final logsAsync = ref.watch(activityLogsProvider);
     return _SectionCard(
-      title: 'Recent activity',
+      title: l.dashRecentActivity,
       child: logsAsync.when(
         data: (logs) {
           if (logs.isEmpty) {
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 12),
-              child: Text('No recent activity',
+              child: Text(l.dashNoRecentActivity,
                   style:
                       AppTextStyles.bodyMedium.copyWith(color: AppColors.textBody)),
             );
@@ -785,8 +793,8 @@ class _RecentActivity extends ConsumerWidget {
               return Column(
                 children: [
                   ActivityCard(
-                    title: _actionLabel(action),
-                    subtitle: _buildSubtitle(action, passport, box),
+                    title: _actionLabel(l, action),
+                    subtitle: _buildSubtitle(l, action, passport, box),
                     timestamp: _formatTimestamp(log['createdAt']),
                     actionType: action,
                   ),
@@ -798,33 +806,33 @@ class _RecentActivity extends ConsumerWidget {
           );
         },
         loading: () => const _CardLoader(),
-        error: (_, __) => const _CardError('Could not load activity'),
+        error: (_, __) => _CardError(l.dashCouldNotLoadActivity),
       ),
     );
   }
 
-  String _actionLabel(String action) {
+  String _actionLabel(AppLocalizations l, String action) {
     switch (action) {
       case 'PASSPORT_ASSIGNED':
-        return 'Batch Assignment';
+        return l.actBatchAssignment;
       case 'PASSPORT_RETURNED':
-        return 'Custody Returned';
+        return l.actCustodyReturned;
       case 'PASSPORT_ISSUED':
-        return 'Passport Issued';
+        return l.actPassportIssued;
       case 'BOX_MOVED':
-        return 'Box Relocated';
+        return l.actBoxRelocated;
       default:
         return action;
     }
   }
 
-  String _buildSubtitle(
-      String action, Map<String, dynamic>? passport, Map<String, dynamic>? box) {
+  String _buildSubtitle(AppLocalizations l, String action,
+      Map<String, dynamic>? passport, Map<String, dynamic>? box) {
     final name = passport?['holderName'] as String?;
     final qr = passport?['qrCode'] as String?;
     final lbl = box?['label'] as String?;
     if (name != null && qr != null) return '$name · $qr';
-    if (lbl != null) return 'Box $lbl';
+    if (lbl != null) return '${l.dashBoxPrefix} $lbl';
     return '';
   }
 

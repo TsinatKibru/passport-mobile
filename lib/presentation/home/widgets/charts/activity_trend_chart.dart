@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../data/models/analytics.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// Width reserved on the left of the plot for the Y-axis value labels.
 const double _kYAxisWidth = 26.0;
@@ -26,7 +27,7 @@ class ActivityTrendChart extends StatelessWidget {
         height: height,
         child: Center(
           child: Text(
-            'No activity in this period',
+            AppLocalizations.of(context).chartNoActivity,
             style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textBody),
           ),
         ),

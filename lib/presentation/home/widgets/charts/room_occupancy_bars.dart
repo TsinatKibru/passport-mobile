@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../data/models/analytics.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// Per-room occupancy bars. Colour shifts green → amber → red as a room fills.
 /// Pure-widget implementation (LayoutBuilder for the bar width), no painter.
@@ -20,7 +21,7 @@ class RoomOccupancyBars extends StatelessWidget {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: Text(
-          'No rooms configured yet',
+          AppLocalizations.of(context).chartNoRooms,
           style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textBody),
         ),
       );
@@ -43,6 +44,7 @@ class _RoomBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final pct = room.capacity > 0 ? (room.fraction * 100).round() : 0;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -51,7 +53,7 @@ class _RoomBar extends StatelessWidget {
           children: [
             Expanded(
               child: Text(
-                room.roomName.isEmpty ? 'Unnamed room' : room.roomName,
+                room.roomName.isEmpty ? l.roomUnnamed : room.roomName,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: AppTextStyles.bodyMedium.copyWith(
@@ -88,7 +90,7 @@ class _RoomBar extends StatelessWidget {
         ),
         const SizedBox(height: 5),
         Text(
-          '${room.boxes} ${room.boxes == 1 ? 'box' : 'boxes'} · ${room.vacant} slots free',
+          '${room.boxes} ${room.boxes == 1 ? l.roomBoxSingular : l.roomBoxPlural} · ${room.vacant} ${l.roomSlotsFree}',
           style: AppTextStyles.caption.copyWith(
             color: AppColors.textBody.withValues(alpha: 0.7),
             fontSize: 10,

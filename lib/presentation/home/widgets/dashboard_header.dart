@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/auth_provider.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../l10n/app_localizations.dart';
 
 class DashboardHeader extends ConsumerWidget {
   final int pendingTasksCount;
@@ -17,13 +18,18 @@ class DashboardHeader extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context);
     final user = ref.watch(authProvider).user;
-    final name = user?.name ?? 'Officer';
+    final name = user?.name ?? l.officer;
     final firstName = name.split(' ').first;
 
     final now = DateTime.now();
     final hour = now.hour;
-    final greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+    final greeting = hour < 12
+        ? l.greetingMorning
+        : hour < 17
+            ? l.greetingAfternoon
+            : l.greetingEvening;
 
     final weekday = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'][now.weekday - 1];
     final month = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][now.month - 1];
