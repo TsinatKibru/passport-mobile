@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/auth_provider.dart';
 import '../core/theme/app_theme.dart';
+import '../l10n/app_localizations.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -38,7 +39,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
 
     if (!success && mounted) {
-      final error = ref.read(authProvider).errorMessage ?? 'Login failed';
+      final l = AppLocalizations.of(context);
+      final error = ref.read(authProvider).errorMessage ?? l.loginFailed;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(error),
@@ -52,6 +54,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
  @override
 Widget build(BuildContext context) {
+  final l = AppLocalizations.of(context);
   final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
   final screenHeight = MediaQuery.of(context).size.height;
 
@@ -120,9 +123,9 @@ Widget build(BuildContext context) {
 
                     children: [
 
-                      const Text(
-                        'Welcome Back',
-                        style: TextStyle(
+                      Text(
+                        l.loginWelcome,
+                        style: const TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.w700,
                           color: AppColors.textPrimary,
@@ -131,9 +134,9 @@ Widget build(BuildContext context) {
 
                       const SizedBox(height: 6),
 
-                      const Text(
-                        'Sign in to continue',
-                        style: TextStyle(
+                      Text(
+                        l.loginSubtitle,
+                        style: const TextStyle(
                           fontSize: 14,
                           color: AppColors.textSecondary,
                         ),
@@ -151,7 +154,7 @@ Widget build(BuildContext context) {
                         ),
 
                         decoration: InputDecoration(
-                          hintText: 'Username',
+                          hintText: l.loginUsername,
                           hintStyle: const TextStyle(
                             color: AppColors.textHint,
                             fontSize: 14,
@@ -190,7 +193,7 @@ Widget build(BuildContext context) {
 
                         validator: (val) {
                           if (val == null || val.isEmpty) {
-                            return 'Username is required';
+                            return l.loginUsernameRequired;
                           }
                           return null;
                         },
@@ -210,7 +213,7 @@ Widget build(BuildContext context) {
                         ),
 
                         decoration: InputDecoration(
-                          hintText: 'Password',
+                          hintText: l.loginPassword,
 
                           hintStyle: const TextStyle(
                             color: AppColors.textHint,
@@ -273,11 +276,11 @@ Widget build(BuildContext context) {
 
                         validator: (val) {
                           if (val == null || val.isEmpty) {
-                            return 'Password is required';
+                            return l.loginPasswordRequired;
                           }
 
                           if (val.length < 6) {
-                            return 'Password must be at least 6 characters';
+                            return l.loginPasswordMinLength;
                           }
 
                           return null;
@@ -324,9 +327,9 @@ Widget build(BuildContext context) {
 
                               const SizedBox(width: 8),
 
-                              const Text(
-                                'Remember me',
-                                style: TextStyle(
+                              Text(
+                                l.loginRememberMe,
+                                style: const TextStyle(
                                   fontSize: 13,
                                   color: AppColors.primary,
                                   fontWeight:
@@ -342,18 +345,18 @@ Widget build(BuildContext context) {
 
                               ScaffoldMessenger.of(context)
                                   .showSnackBar(
-                                const SnackBar(
+                                SnackBar(
                                   content: Text(
-                                    'Contact your administrator to reset password',
+                                    l.loginForgotPasswordHint,
                                   ),
                                 ),
                               );
 
                             },
 
-                            child: const Text(
-                              'Forgot password?',
-                              style: TextStyle(
+                            child: Text(
+                              l.loginForgotPassword,
+                              style: const TextStyle(
                                 fontSize: 13,
                                 color: AppColors.primary,
                                 fontWeight:
@@ -413,10 +416,9 @@ Widget build(BuildContext context) {
                                   ),
                                 )
 
-                              : const Text(
-                                  'Login',
-
-                                  style: TextStyle(
+                              : Text(
+                                  l.loginButton,
+                                  style: const TextStyle(
                                     fontSize: 16,
                                     fontWeight:
                                         FontWeight.w600,

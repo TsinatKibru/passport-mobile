@@ -40,5 +40,18 @@
   "selectLanguage": "Select Language",
   "languageEnglish": "English",
   "languageAmharic": "Amharic",
-  "languageSystem": "System default"
+  "languageSystem": "System default",
+
+  "loginWelcome": "Welcome Back",
+  "loginSubtitle": "Sign in to continue",
+  "loginUsername": "Username",
+  "loginUsernameRequired": "Username is required",
+  "loginPassword": "Password",
+  "loginPasswordRequired": "Password is required",
+  "loginPasswordMinLength": "Password must be at least 6 characters",
+  "loginRememberMe": "Remember me",
+  "loginForgotPassword": "Forgot password?",
+  "loginForgotPasswordHint": "Contact your administrator to reset password",
+  "loginButton": "Login",
+  "loginFailed": "Login failed"
 }

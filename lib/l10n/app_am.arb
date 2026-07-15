@@ -40,5 +40,18 @@
   "selectLanguage": "ቋንቋ ይምረጡ",
   "languageEnglish": "እንግሊዝኛ",
   "languageAmharic": "አማርኛ",
-  "languageSystem": "የመሳሪያ ነባሪ"
+  "languageSystem": "የመሳሪያ ነባሪ",
+
+  "loginWelcome": "እንኳን ደህና መጡ",
+  "loginSubtitle": "ለመቀጠል ይግቡ",
+  "loginUsername": "የተጠቃሚ ስም",
+  "loginUsernameRequired": "የተጠቃሚ ስም ያስፈልጋል",
+  "loginPassword": "የይለፍ ቃል",
+  "loginPasswordRequired": "የይለፍ ቃል ያስፈልጋል",
+  "loginPasswordMinLength": "የይለፍ ቃል ቢያንስ 6 ቁምፊዎች መሆን አለበት",
+  "loginRememberMe": "አስታውሰኝ",
+  "loginForgotPassword": "የይለፍ ቃል ረሱ?",
+  "loginForgotPasswordHint": "የይለፍ ቃል ዳግም ለማስጀመር አስተዳዳሪዎን ያነጋግሩ",
+  "loginButton": "ግባ",
+  "loginFailed": "መግባት አልተሳካም"
 }
