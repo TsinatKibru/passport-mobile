@@ -12,7 +12,9 @@ import 'widgets/activity_card.dart';
 
 class DashboardPage extends ConsumerWidget {
   final ValueChanged<int>? onNavigateToTab;
-  const DashboardPage({super.key, this.onNavigateToTab});
+  /// Opens the Scan tab preselected to [mode] (keeps the bottom nav visible).
+  final void Function(String mode)? onOpenScan;
+  const DashboardPage({super.key, this.onNavigateToTab, this.onOpenScan});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -94,7 +96,7 @@ class DashboardPage extends ConsumerWidget {
                             color: AppColors.success,
                             title: 'Scan & Verify',
                             subtitle: 'Query passport location or box status',
-                            onTap: () => context.push('/scan?mode=verify'),
+                            onTap: () => onOpenScan?.call('verify'),
                             showDivider: false,
                           ),
                         ],

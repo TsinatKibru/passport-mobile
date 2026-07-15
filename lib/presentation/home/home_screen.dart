@@ -17,18 +17,35 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   int _selectedIndex = 0;
 
+  // Mode the Scan tab opens in. Dashboard shortcuts can preselect a mode
+  // (e.g. 'verify') so the scanner opens on the right tab with the bottom nav
+  // still visible — instead of pushing a separate, nav-less route.
+  String _scanMode = 'assign';
+
+  void _selectTab(int index) {
+    setState(() {
+      // Tapping the Scan tab directly opens the general scanner.
+      if (index == 2) _scanMode = 'assign';
+      _selectedIndex = index;
+    });
+  }
+
+  void _openScan(String mode) {
+    setState(() {
+      _scanMode = mode;
+      _selectedIndex = 2;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final List<Widget> pages = [
       DashboardPage(
-        onNavigateToTab: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
-        },
+        onNavigateToTab: _selectTab,
+        onOpenScan: _openScan,
       ),
       const TasksPage(),
-      const ScanPage(),
+      ScanPage(key: ValueKey(_scanMode), initialMode: _scanMode),
       const BoxesPage(),
       const ProfilePage(),
     ];
@@ -42,11 +59,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ),
       bottomNavigationBar: FloatingBottomNav(
         selectedIndex: _selectedIndex,
-        onTap: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
-        },
+        onTap: _selectTab,
       ),
     );
   }
