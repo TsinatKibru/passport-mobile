@@ -330,19 +330,20 @@ class _ScanPageState extends ConsumerState<ScanPage>
 
   void _showFeedback(String message, bool isError) {
     if (!mounted) return;
+    final c = context.colors;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
           children: [
             Icon(
               isError ? Icons.error_outline_rounded : Icons.check_circle_outline_rounded,
-              color: Colors.white,
+              color: isError ? c.onDanger : c.onSuccess,
             ),
             const SizedBox(width: 8),
             Expanded(child: Text(message)),
           ],
         ),
-        backgroundColor: isError ? AppColors.danger : AppColors.success,
+        backgroundColor: isError ? c.danger : c.success,
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 2),
       ),
@@ -429,13 +430,14 @@ class _ScanPageState extends ConsumerState<ScanPage>
 
   void _showVerificationDialog(Passport p) {
     final l = AppLocalizations.of(context);
+    final c = context.colors;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
-            const Icon(Icons.verified_user_rounded, color: AppColors.success),
+            Icon(Icons.verified_user_rounded, color: c.success),
             const SizedBox(width: 10),
             Text(l.scanPassportVerified),
           ],
@@ -455,7 +457,7 @@ class _ScanPageState extends ConsumerState<ScanPage>
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: p.status == 'IN_BOX' ? AppColors.primary.withOpacity(0.1) : AppColors.success.withOpacity(0.1),
+                    color: p.status == 'IN_BOX' ? c.primary.withOpacity(0.1) : c.success.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
@@ -463,7 +465,7 @@ class _ScanPageState extends ConsumerState<ScanPage>
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 11,
-                      color: p.status == 'IN_BOX' ? AppColors.primary : AppColors.success,
+                      color: p.status == 'IN_BOX' ? c.primary : c.success,
                     ),
                   ),
                 ),
@@ -488,13 +490,14 @@ class _ScanPageState extends ConsumerState<ScanPage>
 
   void _showBoxDetailsDialog(models.Box box) {
     final l = AppLocalizations.of(context);
+    final c = context.colors;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
-            const Icon(Icons.inventory_2_rounded, color: AppColors.primary),
+            Icon(Icons.inventory_2_rounded, color: c.primary),
             const SizedBox(width: 10),
             Text(box.label),
           ],
@@ -538,8 +541,9 @@ class _ScanPageState extends ConsumerState<ScanPage>
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    final c = context.colors;
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: c.surface,
       body: SafeArea(
         child: Column(
           children: [
@@ -654,9 +658,9 @@ class _ScanPageState extends ConsumerState<ScanPage>
                         Expanded(
                           child: Container(
                             decoration: BoxDecoration(
-                              color: Colors.white,
+                              color: c.card,
                               borderRadius: BorderRadius.circular(14),
-                              border: Border.all(color: AppColors.border),
+                              border: Border.all(color: c.border),
                             ),
                             child: TextField(
                               controller: _manualController,
@@ -683,11 +687,11 @@ class _ScanPageState extends ConsumerState<ScanPage>
                             }
                           },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
+                            backgroundColor: c.primary,
                             minimumSize: const Size(50, 44),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                           ),
-                          child: const Icon(Icons.arrow_forward, color: Colors.white),
+                          child: Icon(Icons.arrow_forward, color: c.onPrimary),
                         ),
                       ],
                     ),
@@ -709,26 +713,27 @@ class _ScanPageState extends ConsumerState<ScanPage>
 
   Widget _buildModeSelector() {
     final l = AppLocalizations.of(context);
+    final c = context.colors;
     return Container(
-      color: Colors.white,
+      color: c.appBar,
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Row(
           children: [
-            _buildModeTab('assign', l.scanModeAssign, Icons.inventory_2_rounded),
-            _buildModeTab('return', l.scanModeReturn, Icons.swap_horizontal_circle_rounded),
-            _buildModeTab('issue', l.scanModeIssue, Icons.assignment_turned_in_rounded),
-            _buildModeTab('move_box', l.scanModeMove, Icons.drive_file_move_outlined),
-            _buildModeTab('verify', l.scanModeVerify, Icons.verified_user_rounded),
+            _buildModeTab('assign', l.scanModeAssign, Icons.inventory_2_rounded, c),
+            _buildModeTab('return', l.scanModeReturn, Icons.swap_horizontal_circle_rounded, c),
+            _buildModeTab('issue', l.scanModeIssue, Icons.assignment_turned_in_rounded, c),
+            _buildModeTab('move_box', l.scanModeMove, Icons.drive_file_move_outlined, c),
+            _buildModeTab('verify', l.scanModeVerify, Icons.verified_user_rounded, c),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildModeTab(String mode, String label, IconData icon) {
+  Widget _buildModeTab(String mode, String label, IconData icon, AppPalette c) {
     final isActive = _activeMode == mode;
     return GestureDetector(
       onTap: () {
@@ -745,10 +750,10 @@ class _ScanPageState extends ConsumerState<ScanPage>
         margin: const EdgeInsets.only(right: 8),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: isActive ? AppColors.primary.withOpacity(0.08) : Colors.transparent,
+          color: isActive ? c.primary.withOpacity(0.08) : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isActive ? AppColors.primary : Colors.transparent,
+            color: isActive ? c.primary : Colors.transparent,
             width: 1,
           ),
         ),
@@ -758,7 +763,7 @@ class _ScanPageState extends ConsumerState<ScanPage>
             Icon(
               icon,
               size: 14,
-              color: isActive ? AppColors.primary : AppColors.textBody,
+              color: isActive ? c.primary : c.textBody,
             ),
             const SizedBox(width: 6),
             Text(
@@ -766,7 +771,7 @@ class _ScanPageState extends ConsumerState<ScanPage>
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
-                color: isActive ? AppColors.primary : AppColors.textBody,
+                color: isActive ? c.primary : c.textBody,
               ),
             ),
           ],
@@ -876,6 +881,7 @@ class _ScanPageState extends ConsumerState<ScanPage>
 
   Widget _buildScannedSection() {
     final l = AppLocalizations.of(context);
+    final c = context.colors;
     if (_activeMode == 'assign' || _activeMode == 'return') {
       if (_scannedBox == null) {
         return Center(
@@ -884,7 +890,7 @@ class _ScanPageState extends ConsumerState<ScanPage>
             child: Text(
               l.scanAssignHint,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.textBody, fontSize: 13),
+              style: TextStyle(color: c.textBody, fontSize: 13),
             ),
           ),
         );
@@ -899,7 +905,7 @@ class _ScanPageState extends ConsumerState<ScanPage>
             borderRadius: 16,
             child: Row(
               children: [
-                const Icon(Icons.inventory_2_rounded, color: AppColors.primary),
+                Icon(Icons.inventory_2_rounded, color: c.primary),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -911,7 +917,7 @@ class _ScanPageState extends ConsumerState<ScanPage>
                       ),
                       Text(
                         l.scanLocationValue(_scannedBox!.location ?? l.scanUnassignedSlot),
-                        style: const TextStyle(fontSize: 11, color: AppColors.textBody),
+                        style: TextStyle(fontSize: 11, color: c.textBody),
                       ),
                     ],
                   ),
@@ -935,12 +941,12 @@ class _ScanPageState extends ConsumerState<ScanPage>
             children: [
               Text(
                 l.scanScannedPassportsCount(_scannedPassports.length),
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppColors.primaryDark),
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: c.primaryDark),
               ),
               if (_scannedPassports.isNotEmpty)
                 TextButton(
                   onPressed: () => setState(() => _scannedPassports.clear()),
-                  child: Text(l.scanClearList, style: const TextStyle(fontSize: 11, color: AppColors.danger)),
+                  child: Text(l.scanClearList, style: TextStyle(fontSize: 11, color: c.danger)),
                 ),
             ],
           ),
@@ -951,10 +957,10 @@ class _ScanPageState extends ConsumerState<ScanPage>
               padding: const EdgeInsets.symmetric(vertical: 32),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.border, style: BorderStyle.values[1]),
+                border: Border.all(color: c.border, style: BorderStyle.values[1]),
               ),
               child: Center(
-                child: Text(l.scanAppendHint, style: const TextStyle(fontSize: 12, color: AppColors.textBody)),
+                child: Text(l.scanAppendHint, style: TextStyle(fontSize: 12, color: c.textBody)),
               ),
             )
           else
@@ -968,25 +974,25 @@ class _ScanPageState extends ConsumerState<ScanPage>
                   margin: const EdgeInsets.only(bottom: 8),
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: c.card,
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: AppColors.border),
+                    border: Border.all(color: c.border),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.assignment_ind_rounded, size: 18, color: AppColors.primary),
+                      Icon(Icons.assignment_ind_rounded, size: 18, color: c.primary),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(p.holderName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                            Text(p.qrCode, style: const TextStyle(fontSize: 10, color: AppColors.textBody)),
+                            Text(p.qrCode, style: TextStyle(fontSize: 10, color: c.textBody)),
                           ],
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.remove_circle_outline, size: 18, color: AppColors.danger),
+                        icon: Icon(Icons.remove_circle_outline, size: 18, color: c.danger),
                         onPressed: () {
                           setState(() {
                             _scannedPassports.removeAt(idx);
@@ -1021,7 +1027,7 @@ class _ScanPageState extends ConsumerState<ScanPage>
             child: Text(
               l.scanMoveHint,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.textBody, fontSize: 13),
+              style: TextStyle(color: c.textBody, fontSize: 13),
             ),
           ),
         );
@@ -1033,7 +1039,7 @@ class _ScanPageState extends ConsumerState<ScanPage>
           // Box to move details
           Text(
             l.scanBoxToMove,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: AppColors.textBody, letterSpacing: 0.8),
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: c.textBody, letterSpacing: 0.8),
           ),
           const SizedBox(height: 8),
           GlassCard(
@@ -1041,7 +1047,7 @@ class _ScanPageState extends ConsumerState<ScanPage>
             borderRadius: 16,
             child: Row(
               children: [
-                const Icon(Icons.inventory_2_rounded, color: AppColors.primary),
+                Icon(Icons.inventory_2_rounded, color: c.primary),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -1053,7 +1059,7 @@ class _ScanPageState extends ConsumerState<ScanPage>
                       ),
                       Text(
                         l.scanCurrentLocation(_scannedBox!.location ?? l.scanUnassignedSlot),
-                        style: const TextStyle(fontSize: 11, color: AppColors.textBody),
+                        style: TextStyle(fontSize: 11, color: c.textBody),
                       ),
                     ],
                   ),
@@ -1070,7 +1076,7 @@ class _ScanPageState extends ConsumerState<ScanPage>
           // Target slot details
           Text(
             l.scanDestSlot,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: AppColors.textBody, letterSpacing: 0.8),
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: c.textBody, letterSpacing: 0.8),
           ),
           const SizedBox(height: 8),
 
@@ -1079,10 +1085,10 @@ class _ScanPageState extends ConsumerState<ScanPage>
               padding: const EdgeInsets.symmetric(vertical: 32),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.border, style: BorderStyle.values[1]),
+                border: Border.all(color: c.border, style: BorderStyle.values[1]),
               ),
               child: Center(
-                child: Text(l.scanScanDestNext, style: const TextStyle(fontSize: 12, color: AppColors.textBody)),
+                child: Text(l.scanScanDestNext, style: TextStyle(fontSize: 12, color: c.textBody)),
               ),
             )
           else
@@ -1103,13 +1109,13 @@ class _ScanPageState extends ConsumerState<ScanPage>
                         ),
                         Text(
                           _scannedSlot!['location'] ?? '',
-                          style: const TextStyle(fontSize: 11, color: AppColors.textBody),
+                          style: TextStyle(fontSize: 11, color: c.textBody),
                         ),
                       ],
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.remove_circle_outline, size: 18, color: AppColors.danger),
+                    icon: Icon(Icons.remove_circle_outline, size: 18, color: c.danger),
                     onPressed: () => setState(() => _scannedSlot = null),
                   ),
                 ],
@@ -1137,7 +1143,7 @@ class _ScanPageState extends ConsumerState<ScanPage>
             padding: const EdgeInsets.symmetric(vertical: 40),
             child: Text(
               l.scanIssueHint,
-              style: const TextStyle(color: AppColors.textBody, fontSize: 13),
+              style: TextStyle(color: c.textBody, fontSize: 13),
             ),
           ),
         );
@@ -1148,7 +1154,7 @@ class _ScanPageState extends ConsumerState<ScanPage>
         children: [
           Text(
             l.scanPassportReadyIssuance,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: AppColors.textBody, letterSpacing: 0.8),
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: c.textBody, letterSpacing: 0.8),
           ),
           const SizedBox(height: 10),
           GlassCard(
@@ -1158,11 +1164,11 @@ class _ScanPageState extends ConsumerState<ScanPage>
               children: [
                 Text(
                   _scannedSinglePassport!.holderName,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.primaryDark),
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: c.primaryDark),
                 ),
                 const SizedBox(height: 8),
                 Text('${l.boxesIdNo}: ${_scannedSinglePassport!.holderIdNo}', style: const TextStyle(fontSize: 13)),
-                Text(l.scanQrCodeValue(_scannedSinglePassport!.qrCode), style: const TextStyle(fontSize: 13, color: AppColors.textBody)),
+                Text(l.scanQrCodeValue(_scannedSinglePassport!.qrCode), style: TextStyle(fontSize: 13, color: c.textBody)),
                 const SizedBox(height: 12),
                 Row(
                   children: [
@@ -1170,12 +1176,12 @@ class _ScanPageState extends ConsumerState<ScanPage>
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.08),
+                        color: c.primary.withOpacity(0.08),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
                         _passportStatusLabel(l, _scannedSinglePassport!.status),
-                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primary),
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: c.primary),
                       ),
                     ),
                   ],
@@ -1191,7 +1197,7 @@ class _ScanPageState extends ConsumerState<ScanPage>
                   onPressed: _resetCurrentScan,
                   style: OutlinedButton.styleFrom(
                     minimumSize: const Size(0, 48),
-                    side: const BorderSide(color: AppColors.border),
+                    side: BorderSide(color: c.border),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   ),
                   child: Text(l.cancel),
@@ -1202,11 +1208,11 @@ class _ScanPageState extends ConsumerState<ScanPage>
                 child: ElevatedButton(
                   onPressed: _submitIssue,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.danger,
+                    backgroundColor: c.danger,
                     minimumSize: const Size(0, 48),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   ),
-                  child: Text(l.scanConfirmIssuance, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                  child: Text(l.scanConfirmIssuance, style: TextStyle(fontWeight: FontWeight.bold, color: c.onDanger)),
                 ),
               ),
             ],
@@ -1220,14 +1226,14 @@ class _ScanPageState extends ConsumerState<ScanPage>
         children: [
           Text(
             l.scanRecentHistory,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.primaryDark),
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: c.primaryDark),
           ),
           const SizedBox(height: 10),
           _recentScans.isEmpty
               ? Container(
                   padding: const EdgeInsets.symmetric(vertical: 40),
                   child: Center(
-                    child: Text(l.scanNoScans, style: const TextStyle(fontSize: 12, color: AppColors.textBody)),
+                    child: Text(l.scanNoScans, style: TextStyle(fontSize: 12, color: c.textBody)),
                   ),
                 )
               : ListView.builder(
@@ -1240,15 +1246,15 @@ class _ScanPageState extends ConsumerState<ScanPage>
                       margin: const EdgeInsets.only(bottom: 8),
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: c.card,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.border),
+                        border: Border.all(color: c.border),
                       ),
                       child: Row(
                         children: [
                           Icon(
                             item['success'] ? Icons.check_circle_outline : Icons.error_outline,
-                            color: item['success'] ? AppColors.success : AppColors.danger,
+                            color: item['success'] ? c.success : c.danger,
                             size: 18,
                           ),
                           const SizedBox(width: 10),
@@ -1256,12 +1262,12 @@ class _ScanPageState extends ConsumerState<ScanPage>
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(item['type'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: AppColors.textBody)),
+                                Text(item['type'], style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: c.textBody)),
                                 Text(item['label'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                               ],
                             ),
                           ),
-                          Text(item['time'], style: const TextStyle(fontSize: 10, color: AppColors.textBody)),
+                          Text(item['time'], style: TextStyle(fontSize: 10, color: c.textBody)),
                         ],
                       ),
                     );
