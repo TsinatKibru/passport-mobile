@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'base_repository.dart';
 import '../models/user.dart';
@@ -53,5 +54,26 @@ class AuthRepository extends BaseRepository {
   Future<bool> isLoggedIn() async {
     final token = await _storage.read(key: 'accessToken');
     return token != null;
+  }
+
+  /// PUT /auth/change-password — returns null on success, else an error message.
+  Future<String?> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    try {
+      await dio.put('/auth/change-password', data: {
+        'currentPassword': currentPassword,
+        'newPassword': newPassword,
+      });
+      return null;
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      final msg = data is Map ? data['message'] : null;
+      if (msg is List) return msg.join('\n');
+      return msg?.toString() ?? 'Could not change password';
+    } catch (_) {
+      return 'Could not change password';
+    }
   }
 }

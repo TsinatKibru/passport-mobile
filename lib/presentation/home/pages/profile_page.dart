@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/auth_provider.dart';
+import '../../../core/providers/dashboard_provider.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../data/models/analytics.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/fingerprint_background.dart';
 
@@ -15,6 +17,9 @@ class ProfilePage extends ConsumerWidget {
     final email = user?.email ?? 'tsinat.welde@immigration.gov.et';
     final role = user?.role ?? 'IMMIGRATION_OFFICER';
     final staffId = user?.id.substring(0, 8).toUpperCase() ?? 'ICS-94827';
+    final isActive = user?.isActive ?? true;
+    final memberSince = _formatMonthYear(user?.createdAt);
+    final activity = ref.watch(myActivityProvider).valueOrNull;
     
     return Scaffold(
       backgroundColor: AppColors.surface,
@@ -58,11 +63,12 @@ class ProfilePage extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     // Digital Staff ID Card
-                    _buildStaffIdCard(context, name, email, role, staffId),
+                    _buildStaffIdCard(
+                        context, name, email, role, staffId, isActive, memberSince),
                     const SizedBox(height: 24),
-                    
+
                     // Stats section
-                    _buildStatsSection(),
+                    _buildStatsSection(activity),
                     const SizedBox(height: 24),
                     
                     // Options List
@@ -81,27 +87,8 @@ class ProfilePage extends ConsumerWidget {
                     _buildOptionTile(
                       icon: Icons.lock_outline_rounded,
                       title: 'Change Password',
-                      subtitle: 'Update security credentials',
-                      onTap: () {
-                        // TODO: Implement password reset
-                        _showInfoDialog(context, 'Change Password', 'This option is managed by directory service settings.');
-                      },
-                    ),
-                    _buildOptionTile(
-                      icon: Icons.shield_outlined,
-                      title: 'Biometric Login',
-                      subtitle: 'Enable fingerprint authentication',
-                      onTap: () {
-                        _showInfoDialog(context, 'Biometrics', 'Biometric settings are tied to system lock settings.');
-                      },
-                    ),
-                    _buildOptionTile(
-                      icon: Icons.translate_rounded,
-                      title: 'App Language',
-                      subtitle: 'English (US) / Amharic',
-                      onTap: () {
-                        _showInfoDialog(context, 'Language Selection', 'Only English language pack is currently installed.');
-                      },
+                      subtitle: 'Update your login password',
+                      onTap: () => _showChangePasswordDialog(context, ref),
                     ),
                     _buildOptionTile(
                       icon: Icons.info_outline_rounded,
@@ -137,7 +124,8 @@ class ProfilePage extends ConsumerWidget {
     );
   }
 
-  Widget _buildStaffIdCard(BuildContext context, String name, String email, String role, String staffId) {
+  Widget _buildStaffIdCard(BuildContext context, String name, String email,
+      String role, String staffId, bool isActive, String memberSince) {
     return GlassCard(
       padding: EdgeInsets.zero,
       borderRadius: 24,
@@ -270,9 +258,9 @@ class ProfilePage extends ConsumerWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _buildCardMeta('OFFICE', 'HQ - Addis Ababa'),
-                    _buildCardMeta('ISSUED', 'July 2026'),
-                    _buildCardMeta('SECURITY', 'Level 2'),
+                    _buildCardMeta('ROLE', role),
+                    _buildCardMeta('STATUS', isActive ? 'Active' : 'Inactive'),
+                    _buildCardMeta('MEMBER SINCE', memberSince),
                   ],
                 ),
               ],
@@ -310,12 +298,13 @@ class ProfilePage extends ConsumerWidget {
     );
   }
 
-  Widget _buildStatsSection() {
+  Widget _buildStatsSection(MyActivity? a) {
+    String v(int? n) => a == null ? '—' : '${n ?? 0}';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'YOUR ACTIVITY STATISTICS',
+          'YOUR ACTIVITY TODAY',
           style: TextStyle(
             fontFamily: 'Inter',
             fontSize: 11,
@@ -328,15 +317,18 @@ class ProfilePage extends ConsumerWidget {
         Row(
           children: [
             Expanded(
-              child: _buildMiniStatCard('Issued Today', '14', Icons.assignment_turned_in_rounded, AppColors.success),
+              child: _buildMiniStatCard('Issued', v(a?.issuedToday),
+                  Icons.assignment_turned_in_rounded, AppColors.success),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: _buildMiniStatCard('Returns', '5', Icons.swap_horizontal_circle_rounded, AppColors.warning),
+              child: _buildMiniStatCard('Returned', v(a?.returnsToday),
+                  Icons.swap_horizontal_circle_rounded, AppColors.warning),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: _buildMiniStatCard('Box Shifts', '2', Icons.place_rounded, Colors.deepPurple),
+              child: _buildMiniStatCard('Box Moves', v(a?.boxMovesToday),
+                  Icons.place_rounded, Colors.deepPurple),
             ),
           ],
         ),
@@ -481,6 +473,151 @@ class ProfilePage extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+
+  String _formatMonthYear(DateTime? dt) {
+    if (dt == null) return '—';
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+    final d = dt.toLocal();
+    return '${months[d.month - 1]} ${d.year}';
+  }
+
+  void _showChangePasswordDialog(BuildContext context, WidgetRef ref) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => _ChangePasswordDialog(
+        onSubmit: (current, newPass) => ref
+            .read(authRepositoryProvider)
+            .changePassword(currentPassword: current, newPassword: newPass),
+      ),
+    );
+    if (ok == true && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Password updated successfully'),
+          backgroundColor: AppColors.success,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+}
+
+class _ChangePasswordDialog extends StatefulWidget {
+  final Future<String?> Function(String current, String newPass) onSubmit;
+  const _ChangePasswordDialog({required this.onSubmit});
+
+  @override
+  State<_ChangePasswordDialog> createState() => _ChangePasswordDialogState();
+}
+
+class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
+  final _current = TextEditingController();
+  final _newPass = TextEditingController();
+  final _confirm = TextEditingController();
+  bool _loading = false;
+  bool _obscure = true;
+  String? _error;
+
+  @override
+  void dispose() {
+    _current.dispose();
+    _newPass.dispose();
+    _confirm.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (_current.text.isEmpty || _newPass.text.isEmpty) {
+      setState(() => _error = 'Please fill in all fields');
+      return;
+    }
+    if (_newPass.text != _confirm.text) {
+      setState(() => _error = 'New passwords do not match');
+      return;
+    }
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    final err = await widget.onSubmit(_current.text, _newPass.text);
+    if (!mounted) return;
+    if (err == null) {
+      Navigator.pop(context, true);
+    } else {
+      setState(() {
+        _loading = false;
+        _error = err;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: const Text('Change Password'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextField(
+            controller: _current,
+            obscureText: true,
+            decoration: const InputDecoration(labelText: 'Current password'),
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            controller: _newPass,
+            obscureText: _obscure,
+            decoration: InputDecoration(
+              labelText: 'New password',
+              suffixIcon: IconButton(
+                icon: Icon(_obscure ? Icons.visibility_off : Icons.visibility,
+                    size: 18),
+                onPressed: () => setState(() => _obscure = !_obscure),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            controller: _confirm,
+            obscureText: _obscure,
+            decoration: const InputDecoration(labelText: 'Confirm new password'),
+          ),
+          if (_error != null) ...[
+            const SizedBox(height: 10),
+            Text(_error!,
+                style: const TextStyle(color: AppColors.danger, fontSize: 12)),
+          ],
+          const SizedBox(height: 8),
+          const Text(
+            'At least 8 characters with upper, lower, number & special character.',
+            style: TextStyle(color: AppColors.textBody, fontSize: 10),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: _loading ? null : () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: _loading ? null : _submit,
+          child: _loading
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2, color: Colors.white),
+                )
+              : const Text('Update'),
+        ),
+      ],
     );
   }
 }

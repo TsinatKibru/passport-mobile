@@ -81,3 +81,28 @@ class RoomOccupancy {
   /// Occupancy as a 0..1 fraction (safe when capacity is 0).
   double get fraction => capacity > 0 ? occupied / capacity : 0.0;
 }
+
+/// The signed-in officer's own activity counts for today.
+class MyActivity {
+  final int issuedToday;
+  final int returnsToday;
+  final int boxMovesToday;
+
+  MyActivity({
+    required this.issuedToday,
+    required this.returnsToday,
+    required this.boxMovesToday,
+  });
+
+  factory MyActivity.fromJson(Map<String, dynamic> json) {
+    int asInt(dynamic v) => v is int ? v : int.tryParse('${v ?? 0}') ?? 0;
+    return MyActivity(
+      issuedToday: asInt(json['issuedToday']),
+      returnsToday: asInt(json['returnsToday']),
+      boxMovesToday: asInt(json['boxMovesToday']),
+    );
+  }
+
+  static MyActivity empty() =>
+      MyActivity(issuedToday: 0, returnsToday: 0, boxMovesToday: 0);
+}

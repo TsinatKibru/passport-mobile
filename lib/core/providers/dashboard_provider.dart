@@ -28,3 +28,8 @@ final roomOccupancyProvider = FutureProvider<List<RoomOccupancy>>((ref) async {
   return await repo.getRoomOccupancy();
 });
 
+final myActivityProvider = FutureProvider<MyActivity>((ref) async {
+  final repo = ref.read(dashboardRepositoryProvider);
+  return await repo.getMyActivity();
+});
+

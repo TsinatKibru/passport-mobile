@@ -59,5 +59,16 @@ class DashboardRepository extends BaseRepository {
       return [];
     }
   }
+
+  /// GET /dashboard/my-activity — the current officer's counts for today.
+  Future<MyActivity> getMyActivity() async {
+    try {
+      final res = await dio.get('/dashboard/my-activity');
+      return MyActivity.fromJson(res.data as Map<String, dynamic>);
+    } catch (e) {
+      print('Error fetching my activity: $e');
+      return MyActivity.empty();
+    }
+  }
 }
 
