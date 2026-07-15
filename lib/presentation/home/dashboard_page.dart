@@ -54,7 +54,7 @@ class DashboardPage extends ConsumerWidget {
                       pendingTasks: pendingCount,
                       onIssueTap: () => context.push('/scan?mode=issue'),
                       onReturnTap: () => context.push('/scan?mode=return'),
-                      onAssignTap: () => context.push('/scan?mode=assign'),
+                      onAssignTap: () => onOpenScan?.call('assign'),
                     ),
                     const SizedBox(height: 28),
 
