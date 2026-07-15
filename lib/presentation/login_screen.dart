@@ -26,19 +26,31 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     super.dispose();
   }
 
-  // The ICS logo art is designed for light backgrounds (dark-blue wordmark
-  // + faint cityscape on a transparent bg). In dark mode we mirror the
-  // web-admin's logo treatment: soften (opacity) and lift the artwork with a
-  // brightness/contrast colour-matrix so the dark-blue reads and blends on the
-  // dark surface instead of sitting dark-on-dark. Values are gentle — tune to taste.
+  // The ICS logo art is designed for light backgrounds: a dark-blue wordmark
+  // (top ~25-65% of the image) plus a pale cityscape silhouette along the
+  // bottom (~70-100%), all on a transparent bg. In dark mode that reads badly —
+  // the wordmark is dark-on-dark and the pale cityscape glows near-white.
+  // Treatment (mirrors the web-admin's dark-mode logo handling):
+  //   1) lift the dark-blue artwork with a brightness colour-matrix so it reads,
+  //   2) fade out the bottom cityscape band with a vertical gradient mask so it
+  //      doesn't sit as a white block on the dark surface.
+  // Light mode is untouched. Fade stops / lift are gentle — tune to taste.
   Widget _brandLogo(bool isDark) {
     const asset = Image(
       image: AssetImage('assets/images/ics-logo.png'),
       fit: BoxFit.contain,
     );
     if (!isDark) return asset;
-    return Opacity(
-      opacity: 0.92,
+    return ShaderMask(
+      // dstIn keeps the child only where the gradient is opaque → the bottom
+      // (transparent stop) fades away, dropping the cityscape.
+      blendMode: BlendMode.dstIn,
+      shaderCallback: (rect) => const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [Colors.white, Colors.white, Colors.transparent],
+        stops: [0.0, 0.66, 0.74],
+      ).createShader(rect),
       child: ColorFiltered(
         colorFilter: const ColorFilter.matrix(<double>[
           1.2, 0, 0, 0, 22, // R = R*1.2 + 22
