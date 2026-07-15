@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/auth_provider.dart';
@@ -33,20 +31,8 @@ class DashboardHeader extends ConsumerWidget {
 
     return Container(
       color: Colors.white,
-      child: Stack(
-        children: [
-          // Biometric fingerprint motif behind the header content.
-          Positioned.fill(
-            child: ClipRect(
-              child: IgnorePointer(
-                child: CustomPaint(painter: _HeaderFingerprintPainter()),
-              ),
-            ),
-          ),
-          Padding(
-            padding: EdgeInsets.fromLTRB(
-                22, MediaQuery.of(context).padding.top + 14, 22, 18),
-            child: Row(
+      padding: EdgeInsets.fromLTRB(22, MediaQuery.of(context).padding.top + 14, 22, 18),
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
@@ -124,54 +110,6 @@ class DashboardHeader extends ConsumerWidget {
           ),
         ],
       ),
-          ),
-        ],
-      ),
     );
   }
-}
-
-class _HeaderFingerprintPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.4
-      ..color = AppColors.primary.withValues(alpha: 0.06);
-
-    // Concentric fingerprint ridges emanating from the top-right corner and
-    // clipped to the header — a subtle biometric / passport-security motif.
-    final center = Offset(size.width * 0.9, size.height * 0.02);
-    for (int r = 14; r < 160; r += 11) {
-      final base = Path()
-        ..addArc(
-          Rect.fromCircle(center: center, radius: r.toDouble()),
-          math.pi * 0.55,
-          math.pi * 1.25,
-        );
-
-      // Distort each arc slightly so the ridges read as organic, not perfect.
-      final ridge = Path();
-      for (final metric in base.computeMetrics()) {
-        var first = true;
-        for (double d = 0; d < metric.length; d += 5) {
-          final t = metric.getTangentForOffset(d);
-          if (t == null) continue;
-          final normal = Offset(-t.vector.dy, t.vector.dx);
-          final wobble = math.sin(d * 0.05 + r) * 1.2;
-          final p = t.position + normal * wobble;
-          if (first) {
-            ridge.moveTo(p.dx, p.dy);
-            first = false;
-          } else {
-            ridge.lineTo(p.dx, p.dy);
-          }
-        }
-      }
-      canvas.drawPath(ridge, paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

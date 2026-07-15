@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -175,7 +177,7 @@ class _HeroCard extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
@@ -191,10 +193,20 @@ class _HeroCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
         children: [
-          Row(
+          // Biometric fingerprint watermark, clipped to the card.
+          Positioned.fill(
+            child: IgnorePointer(
+              child: CustomPaint(painter: _HeroFingerprintPainter()),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
             children: [
               Expanded(
                 child: Column(
@@ -280,8 +292,56 @@ class _HeroCard extends StatelessWidget {
           ),
         ],
       ),
+          ),
+        ],
+      ),
     );
   }
+}
+
+class _HeroFingerprintPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.6
+      ..color = Colors.white.withValues(alpha: 0.10);
+
+    // Large biometric fingerprint bleeding in from the right edge, clipped to
+    // the card — a passport-security watermark on the storage overview.
+    final center = Offset(size.width * 1.02, size.height * 0.5);
+    for (int r = 26; r < 230; r += 13) {
+      final base = Path()
+        ..addArc(
+          Rect.fromCircle(center: center, radius: r.toDouble()),
+          math.pi * 0.5,
+          math.pi,
+        );
+
+      // Distort each ring slightly so it reads as an organic fingerprint.
+      final ridge = Path();
+      for (final metric in base.computeMetrics()) {
+        var first = true;
+        for (double d = 0; d < metric.length; d += 6) {
+          final t = metric.getTangentForOffset(d);
+          if (t == null) continue;
+          final normal = Offset(-t.vector.dy, t.vector.dx);
+          final wobble = math.sin(d * 0.045 + r) * 1.6;
+          final p = t.position + normal * wobble;
+          if (first) {
+            ridge.moveTo(p.dx, p.dy);
+            first = false;
+          } else {
+            ridge.lineTo(p.dx, p.dy);
+          }
+        }
+      }
+      canvas.drawPath(ridge, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _HeroStat extends StatelessWidget {
