@@ -10,6 +10,7 @@ import '../../../data/repositories/passport_repository.dart';
 import '../../../data/repositories/box_repository.dart';
 import '../../../data/models/passport.dart';
 import '../../../data/models/box.dart' as models;
+import '../../../l10n/app_localizations.dart';
 import '../widgets/glass_card.dart';
 
 class ScanPage extends ConsumerStatefulWidget {
@@ -120,7 +121,22 @@ class _ScanPageState extends ConsumerState<ScanPage>
     }
   }
 
+  // Map a raw backend passport status onto its localised label.
+  String _passportStatusLabel(AppLocalizations l, String status) {
+    switch (status.toUpperCase()) {
+      case 'ISSUED':
+        return l.psIssued;
+      case 'IN_BOX':
+        return l.psInBox;
+      case 'RETURNED':
+        return l.psReturned;
+      default:
+        return status;
+    }
+  }
+
   Future<void> _processScannedCode(String code) async {
+    final l = AppLocalizations.of(context);
     // Anti-spam protection: ignore rapid duplicate scans
     final now = DateTime.now();
     if (_lastScannedCode == code && 
@@ -145,36 +161,37 @@ class _ScanPageState extends ConsumerState<ScanPage>
           // Scanning Box QR first
           final box = await _boxRepo.getByQr(code);
           if (box == null) {
-            _showFeedback('Box not found: $code', true);
+            _showFeedback(l.scanBoxNotFound(code), true);
             hasError = true;
           } else {
             setState(() {
               _scannedBox = box;
               _recentScans.insert(0, {
-                'type': 'Box Scanned',
+                'type': l.scanHistBoxScanned,
                 'label': box.label,
                 'code': code,
-                'time': 'Just now',
+                'time': l.scanJustNow,
                 'success': true,
               });
             });
-            _showFeedback('Box ${box.label} registered.', false);
+            _showFeedback(l.scanBoxRegistered(box.label), false);
           }
         } else {
           // Scanning Passport QR next
           if (_scannedPassports.any((p) => p.qrCode == code)) {
-            _showFeedback('Passport already in current batch', true);
+            _showFeedback(l.scanPassportAlreadyInBatch, true);
             hasError = true;
             setState(() => _isScanning = true);
             return;
           }
           final passport = await _passportRepo.getByQr(code);
           if (passport == null) {
-            _showFeedback('Passport not found: $code', true);
+            _showFeedback(l.scanPassportNotFound(code), true);
             hasError = true;
           } else if (!passport.isIssued) {
             _showFeedback(
-              '${passport.holderName} is ${passport.status} — only ISSUED passports can be assigned',
+              l.scanOnlyIssuedCanAssign(
+                  passport.holderName, _passportStatusLabel(l, passport.status)),
               true,
             );
             hasError = true;
@@ -182,25 +199,26 @@ class _ScanPageState extends ConsumerState<ScanPage>
             setState(() {
               _scannedPassports.add(passport);
               _recentScans.insert(0, {
-                'type': 'Passport Scanned',
+                'type': l.scanHistPassportScanned,
                 'label': passport.holderName,
                 'code': code,
-                'time': 'Just now',
+                'time': l.scanJustNow,
                 'success': true,
               });
             });
-            _showFeedback('Passport: ${passport.holderName} added.', false);
+            _showFeedback(l.scanPassportAdded(passport.holderName), false);
           }
         }
       } else if (_activeMode == 'issue') {
         // Issue passport to holder
         final passport = await _passportRepo.getByQr(code);
         if (passport == null) {
-          _showFeedback('Passport not found: $code', true);
+          _showFeedback(l.scanPassportNotFound(code), true);
           hasError = true;
         } else if (!passport.isInBox) {
           _showFeedback(
-            '${passport.holderName} is ${passport.status} — only IN_BOX passports can be issued',
+            l.scanOnlyInBoxCanIssue(
+                passport.holderName, _passportStatusLabel(l, passport.status)),
             true,
           );
           hasError = true;
@@ -208,52 +226,52 @@ class _ScanPageState extends ConsumerState<ScanPage>
           setState(() {
             _scannedSinglePassport = passport;
             _recentScans.insert(0, {
-              'type': 'Issue Passport',
+              'type': l.scanHistIssuePassport,
               'label': passport.holderName,
               'code': code,
-              'time': 'Just now',
+              'time': l.scanJustNow,
               'success': true,
             });
           });
-          _showFeedback('Passport identified: ${passport.holderName}', false);
+          _showFeedback(l.scanPassportIdentified(passport.holderName), false);
         }
       } else if (_activeMode == 'move_box') {
         if (_scannedBox == null) {
           final box = await _boxRepo.getByQr(code);
           if (box == null) {
-            _showFeedback('Box not found: $code', true);
+            _showFeedback(l.scanBoxNotFound(code), true);
             hasError = true;
           } else {
             setState(() {
               _scannedBox = box;
               _recentScans.insert(0, {
-                'type': 'Box Scanned',
+                'type': l.scanHistBoxScanned,
                 'label': box.label,
                 'code': code,
-                'time': 'Just now',
+                'time': l.scanJustNow,
                 'success': true,
               });
             });
-            _showFeedback('Box ${box.label} scanned.', false);
+            _showFeedback(l.scanBoxScanned(box.label), false);
           }
         } else {
           // Scan Slot next
           final res = await _boxRepo.dio.get('/location/slots/qr/$code');
           if (res.data == null) {
-            _showFeedback('Slot not found: $code', true);
+            _showFeedback(l.scanSlotNotFound(code), true);
             hasError = true;
           } else {
             setState(() {
               _scannedSlot = res.data;
               _recentScans.insert(0, {
-                'type': 'Slot Scanned',
+                'type': l.scanHistSlotScanned,
                 'label': res.data['name'] ?? '',
                 'code': code,
-                'time': 'Just now',
+                'time': l.scanJustNow,
                 'success': true,
               });
             });
-            _showFeedback('Slot ${res.data['name']} scanned.', false);
+            _showFeedback(l.scanSlotScanned(res.data['name'] ?? ''), false);
           }
         }
       } else {
@@ -263,10 +281,10 @@ class _ScanPageState extends ConsumerState<ScanPage>
           setState(() {
             _scannedSinglePassport = passport;
             _recentScans.insert(0, {
-              'type': 'Verification Success',
+              'type': l.scanHistVerificationSuccess,
               'label': passport.holderName,
               'code': code,
-              'time': 'Just now',
+              'time': l.scanJustNow,
               'success': true,
             });
           });
@@ -277,22 +295,22 @@ class _ScanPageState extends ConsumerState<ScanPage>
           if (box != null) {
             setState(() {
               _recentScans.insert(0, {
-                'type': 'Box Verified',
+                'type': l.scanHistBoxVerified,
                 'label': box.label,
                 'code': code,
-                'time': 'Just now',
+                'time': l.scanJustNow,
                 'success': true,
               });
             });
             _showBoxDetailsDialog(box);
           } else {
-            _showFeedback('QR code not registered in system: $code', true);
+            _showFeedback(l.scanQrNotRegistered(code), true);
             hasError = true;
           }
         }
       }
     } catch (e) {
-      _showFeedback('Lookup failed: $e', true);
+      _showFeedback(l.scanLookupFailed('$e'), true);
       hasError = true;
     } finally {
       // Use different delays: 3s for errors, 1s for success
@@ -342,25 +360,26 @@ class _ScanPageState extends ConsumerState<ScanPage>
 
   Future<void> _submitBatch() async {
     if (_scannedBox == null || _scannedPassports.isEmpty) return;
-    
+
+    final l = AppLocalizations.of(context);
     setState(() => _isScanning = false);
     final passportIds = _scannedPassports.map((p) => p.id).toList();
-    
+
     try {
       await _passportRepo.batchAssign(
         passportIds: passportIds,
         boxId: _scannedBox!.id,
         action: 'PASSPORT_ASSIGNED',
       );
-      
-      _showFeedback('Successfully stored ${passportIds.length} passports in ${_scannedBox!.label}', false);
+
+      _showFeedback(l.scanBatchStored(passportIds.length, _scannedBox!.label), false);
       _resetCurrentScan();
     } on DioException catch (e) {
       final data = e.response?.data;
-      final message = data is Map ? (data['message'] as String? ?? 'Batch operation failed') : 'Batch operation failed';
+      final message = data is Map ? (data['message'] as String? ?? l.scanBatchFailed) : l.scanBatchFailed;
       _showFeedback(message, true);
     } catch (e) {
-      _showFeedback('Error submitting batch: $e', true);
+      _showFeedback(l.scanBatchError('$e'), true);
     } finally {
       setState(() => _isScanning = true);
     }
@@ -368,17 +387,18 @@ class _ScanPageState extends ConsumerState<ScanPage>
 
   Future<void> _submitIssue() async {
     if (_scannedSinglePassport == null) return;
+    final l = AppLocalizations.of(context);
     setState(() => _isScanning = false);
     try {
       final success = await _passportRepo.issue(_scannedSinglePassport!.id);
       if (success) {
-        _showFeedback('Passport successfully issued to ${_scannedSinglePassport!.holderName}', false);
+        _showFeedback(l.scanIssueSuccess(_scannedSinglePassport!.holderName), false);
         _resetCurrentScan();
       } else {
-        _showFeedback('Issuance failed', true);
+        _showFeedback(l.scanIssueFailed, true);
       }
     } catch (e) {
-      _showFeedback('Error: $e', true);
+      _showFeedback(l.scanGenericError('$e'), true);
     } finally {
       setState(() => _isScanning = true);
     }
@@ -386,27 +406,29 @@ class _ScanPageState extends ConsumerState<ScanPage>
 
   Future<void> _submitBoxMove() async {
     if (_scannedBox == null || _scannedSlot == null) return;
+    final l = AppLocalizations.of(context);
     setState(() => _isScanning = false);
     try {
       final success = await _boxRepo.move(_scannedBox!.id, _scannedSlot!['id']);
       if (success) {
-        _showFeedback('Box successfully moved to slot ${_scannedSlot!['name']}', false);
+        _showFeedback(l.scanBoxMoveSuccess(_scannedSlot!['name'] ?? ''), false);
         if (Navigator.canPop(context)) {
           Navigator.pop(context);
         } else {
           _resetCurrentScan();
         }
       } else {
-        _showFeedback('Box move failed', true);
+        _showFeedback(l.scanBoxMoveFailed, true);
       }
     } catch (e) {
-      _showFeedback('Error moving box: $e', true);
+      _showFeedback(l.scanBoxMoveError('$e'), true);
     } finally {
       setState(() => _isScanning = true);
     }
   }
 
   void _showVerificationDialog(Passport p) {
+    final l = AppLocalizations.of(context);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -415,21 +437,21 @@ class _ScanPageState extends ConsumerState<ScanPage>
           children: [
             const Icon(Icons.verified_user_rounded, color: AppColors.success),
             const SizedBox(width: 10),
-            const Text('Passport Verified'),
+            Text(l.scanPassportVerified),
           ],
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Holder: ${p.holderName}', style: const TextStyle(fontWeight: FontWeight.bold)),
+            Text(l.scanHolder(p.holderName), style: const TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 6),
-            Text('ID Number: ${p.holderIdNo}'),
-            Text('QR Code: ${p.qrCode}'),
+            Text(l.scanIdNumber(p.holderIdNo)),
+            Text(l.scanQrCodeValue(p.qrCode)),
             const SizedBox(height: 6),
             Row(
               children: [
-                const Text('Status: '),
+                Text(l.scanStatusLabel),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
@@ -437,7 +459,7 @@ class _ScanPageState extends ConsumerState<ScanPage>
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
-                    p.status,
+                    _passportStatusLabel(l, p.status),
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 11,
@@ -449,15 +471,15 @@ class _ScanPageState extends ConsumerState<ScanPage>
             ),
             if (p.box != null) ...[
               const SizedBox(height: 10),
-              Text('Location: Box ${p.box!.label}'),
-              if (p.box!.location != null) Text('Shelf: ${p.box!.location}'),
+              Text(l.scanLocationBox(p.box!.label)),
+              if (p.box!.location != null) Text(l.scanShelf(p.box!.location ?? '')),
             ],
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+            child: Text(l.close),
           ),
         ],
       ),
@@ -465,6 +487,7 @@ class _ScanPageState extends ConsumerState<ScanPage>
   }
 
   void _showBoxDetailsDialog(models.Box box) {
+    final l = AppLocalizations.of(context);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -480,14 +503,14 @@ class _ScanPageState extends ConsumerState<ScanPage>
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('QR Code: ${box.qrCode}'),
-            Text('Capacity: ${box.occupiedCount} / ${box.capacity} occupied'),
-            Text('Location: ${box.location ?? "Not assigned"}'),
+            Text(l.scanQrCodeValue(box.qrCode)),
+            Text(l.scanCapacity(box.occupiedCount, box.capacity)),
+            Text(l.scanLocationValue(box.location ?? l.scanNotAssigned)),
             const SizedBox(height: 10),
-            const Text('Passports stored inside:', style: TextStyle(fontWeight: FontWeight.bold)),
+            Text(l.scanPassportsStoredInside, style: const TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 6),
             box.passports == null || box.passports!.isEmpty
-                ? const Text('Box is empty')
+                ? Text(l.scanBoxEmpty)
                 : SizedBox(
                     height: 120,
                     width: double.maxFinite,
@@ -496,7 +519,7 @@ class _ScanPageState extends ConsumerState<ScanPage>
                       itemCount: box.passports!.length,
                       itemBuilder: (context, idx) {
                         final p = box.passports![idx];
-                        return Text('• ${p.holderName} (${p.qrCode})', style: const TextStyle(fontSize: 12));
+                        return Text(l.scanPassportBullet(p.holderName, p.qrCode), style: const TextStyle(fontSize: 12));
                       },
                     ),
                   ),
@@ -505,7 +528,7 @@ class _ScanPageState extends ConsumerState<ScanPage>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+            child: Text(l.close),
           ),
         ],
       ),
@@ -514,6 +537,7 @@ class _ScanPageState extends ConsumerState<ScanPage>
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: AppColors.surface,
       body: SafeArea(
@@ -598,7 +622,7 @@ class _ScanPageState extends ConsumerState<ScanPage>
                           icon: Icons.photo_library_outlined,
                           onTap: () async {
                             // Gallery barcode scan integration (could mock or implement using image_picker if needed)
-                            _showFeedback('Gallery import not supported on this device simulator', true);
+                            _showFeedback(l.scanGalleryUnsupported, true);
                           },
                         ),
                       ],
@@ -637,12 +661,12 @@ class _ScanPageState extends ConsumerState<ScanPage>
                             child: TextField(
                               controller: _manualController,
                               style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                              decoration: const InputDecoration(
-                                hintText: 'Enter code manually...',
+                              decoration: InputDecoration(
+                                hintText: l.scanEnterCodeManually,
                                 border: InputBorder.none,
                                 enabledBorder: InputBorder.none,
                                 focusedBorder: InputBorder.none,
-                                contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                                 filled: false,
                               ),
                             ),
@@ -684,6 +708,7 @@ class _ScanPageState extends ConsumerState<ScanPage>
   }
 
   Widget _buildModeSelector() {
+    final l = AppLocalizations.of(context);
     return Container(
       color: Colors.white,
       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -692,11 +717,11 @@ class _ScanPageState extends ConsumerState<ScanPage>
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Row(
           children: [
-            _buildModeTab('assign', 'Assign Box', Icons.inventory_2_rounded),
-            _buildModeTab('return', 'Return Custody', Icons.swap_horizontal_circle_rounded),
-            _buildModeTab('issue', 'Issue Owner', Icons.assignment_turned_in_rounded),
-            _buildModeTab('move_box', 'Move Box', Icons.drive_file_move_outlined),
-            _buildModeTab('verify', 'Quick Verify', Icons.verified_user_rounded),
+            _buildModeTab('assign', l.scanModeAssign, Icons.inventory_2_rounded),
+            _buildModeTab('return', l.scanModeReturn, Icons.swap_horizontal_circle_rounded),
+            _buildModeTab('issue', l.scanModeIssue, Icons.assignment_turned_in_rounded),
+            _buildModeTab('move_box', l.scanModeMove, Icons.drive_file_move_outlined),
+            _buildModeTab('verify', l.scanModeVerify, Icons.verified_user_rounded),
           ],
         ),
       ),
@@ -775,41 +800,42 @@ class _ScanPageState extends ConsumerState<ScanPage>
   }
 
   Widget _buildStateOverlay() {
-    String text = 'Ready to Scan';
+    final l = AppLocalizations.of(context);
+    String text = l.scanReadyToScan;
     Color color = Colors.black87;
-    
+
     if (_activeMode == 'assign') {
       if (_scannedBox == null) {
-        text = 'Scan TARGET BOX QR Code';
+        text = l.scanTargetBoxPrompt;
         color = AppColors.primary;
       } else {
-        text = 'Box Locked. Scan Passport QR Codes.';
+        text = l.scanBoxLockedPassports;
         color = AppColors.success;
       }
     } else if (_activeMode == 'return') {
       if (_scannedBox == null) {
-        text = 'Scan RETURN BOX QR Code';
+        text = l.scanReturnBoxPrompt;
         color = AppColors.primary;
       } else {
-        text = 'Box Locked. Scan Returned Passports.';
+        text = l.scanBoxLockedReturned;
         color = AppColors.warning;
       }
     } else if (_activeMode == 'move_box') {
       if (_scannedBox == null) {
-        text = 'Scan BOX QR Code to Move';
+        text = l.scanBoxToMovePrompt;
         color = AppColors.primary;
       } else if (_scannedSlot == null) {
-        text = 'Scan DESTINATION SLOT QR Code';
+        text = l.scanDestSlotPrompt;
         color = Colors.deepPurple;
       } else {
-        text = 'Slot Locked. Confirm movement.';
+        text = l.scanSlotLockedConfirm;
         color = AppColors.success;
       }
     } else if (_activeMode == 'issue') {
-      text = 'Scan Passport QR Code to Issue';
+      text = l.scanPassportToIssuePrompt;
       color = AppColors.danger;
     } else {
-      text = 'Scan Any QR Code to Quick Verify';
+      text = l.scanAnyToVerifyPrompt;
       color = Colors.blueGrey;
     }
 
@@ -849,15 +875,16 @@ class _ScanPageState extends ConsumerState<ScanPage>
   }
 
   Widget _buildScannedSection() {
+    final l = AppLocalizations.of(context);
     if (_activeMode == 'assign' || _activeMode == 'return') {
       if (_scannedBox == null) {
-        return const Center(
+        return Center(
           child: Padding(
-            padding: EdgeInsets.symmetric(vertical: 40),
+            padding: const EdgeInsets.symmetric(vertical: 40),
             child: Text(
-              'Scan a Box QR code or input its label manually to begin storage.',
+              l.scanAssignHint,
               textAlign: TextAlign.center,
-              style: TextStyle(color: AppColors.textBody, fontSize: 13),
+              style: const TextStyle(color: AppColors.textBody, fontSize: 13),
             ),
           ),
         );
@@ -879,11 +906,11 @@ class _ScanPageState extends ConsumerState<ScanPage>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Target Box: ${_scannedBox!.label}',
+                        l.scanTargetBox(_scannedBox!.label),
                         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                       ),
                       Text(
-                        'Location: ${_scannedBox!.location ?? "Unassigned Slot"}',
+                        l.scanLocationValue(_scannedBox!.location ?? l.scanUnassignedSlot),
                         style: const TextStyle(fontSize: 11, color: AppColors.textBody),
                       ),
                     ],
@@ -907,13 +934,13 @@ class _ScanPageState extends ConsumerState<ScanPage>
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Scanned Passports (${_scannedPassports.length})',
+                l.scanScannedPassportsCount(_scannedPassports.length),
                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppColors.primaryDark),
               ),
               if (_scannedPassports.isNotEmpty)
                 TextButton(
                   onPressed: () => setState(() => _scannedPassports.clear()),
-                  child: const Text('Clear list', style: TextStyle(fontSize: 11, color: AppColors.danger)),
+                  child: Text(l.scanClearList, style: const TextStyle(fontSize: 11, color: AppColors.danger)),
                 ),
             ],
           ),
@@ -926,8 +953,8 @@ class _ScanPageState extends ConsumerState<ScanPage>
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: AppColors.border, style: BorderStyle.values[1]),
               ),
-              child: const Center(
-                child: Text('Scan passport QR codes to append...', style: TextStyle(fontSize: 12, color: AppColors.textBody)),
+              child: Center(
+                child: Text(l.scanAppendHint, style: const TextStyle(fontSize: 12, color: AppColors.textBody)),
               ),
             )
           else
@@ -980,7 +1007,7 @@ class _ScanPageState extends ConsumerState<ScanPage>
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             ),
             child: Text(
-              _activeMode == 'return' ? 'Confirm Return Custody' : 'Confirm Box Assignment',
+              _activeMode == 'return' ? l.scanConfirmReturn : l.scanConfirmAssign,
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
@@ -988,13 +1015,13 @@ class _ScanPageState extends ConsumerState<ScanPage>
       );
     } else if (_activeMode == 'move_box') {
       if (_scannedBox == null) {
-        return const Center(
+        return Center(
           child: Padding(
-            padding: EdgeInsets.symmetric(vertical: 40),
+            padding: const EdgeInsets.symmetric(vertical: 40),
             child: Text(
-              'Scan a Box QR code to initiate movement.',
+              l.scanMoveHint,
               textAlign: TextAlign.center,
-              style: TextStyle(color: AppColors.textBody, fontSize: 13),
+              style: const TextStyle(color: AppColors.textBody, fontSize: 13),
             ),
           ),
         );
@@ -1004,9 +1031,9 @@ class _ScanPageState extends ConsumerState<ScanPage>
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // Box to move details
-          const Text(
-            'BOX TO MOVE',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: AppColors.textBody, letterSpacing: 0.8),
+          Text(
+            l.scanBoxToMove,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: AppColors.textBody, letterSpacing: 0.8),
           ),
           const SizedBox(height: 8),
           GlassCard(
@@ -1025,7 +1052,7 @@ class _ScanPageState extends ConsumerState<ScanPage>
                         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                       ),
                       Text(
-                        'Current Location: ${_scannedBox!.location ?? "Unassigned Slot"}',
+                        l.scanCurrentLocation(_scannedBox!.location ?? l.scanUnassignedSlot),
                         style: const TextStyle(fontSize: 11, color: AppColors.textBody),
                       ),
                     ],
@@ -1041,9 +1068,9 @@ class _ScanPageState extends ConsumerState<ScanPage>
           const SizedBox(height: 20),
 
           // Target slot details
-          const Text(
-            'DESTINATION SLOT',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: AppColors.textBody, letterSpacing: 0.8),
+          Text(
+            l.scanDestSlot,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: AppColors.textBody, letterSpacing: 0.8),
           ),
           const SizedBox(height: 8),
 
@@ -1054,8 +1081,8 @@ class _ScanPageState extends ConsumerState<ScanPage>
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: AppColors.border, style: BorderStyle.values[1]),
               ),
-              child: const Center(
-                child: Text('Scan destination Slot QR code next...', style: TextStyle(fontSize: 12, color: AppColors.textBody)),
+              child: Center(
+                child: Text(l.scanScanDestNext, style: const TextStyle(fontSize: 12, color: AppColors.textBody)),
               ),
             )
           else
@@ -1071,7 +1098,7 @@ class _ScanPageState extends ConsumerState<ScanPage>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          _scannedSlot!['name'] ?? 'Unknown Slot',
+                          _scannedSlot!['name'] ?? l.scanUnknownSlot,
                           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                         ),
                         Text(
@@ -1096,21 +1123,21 @@ class _ScanPageState extends ConsumerState<ScanPage>
               minimumSize: const Size(double.infinity, 48),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             ),
-            child: const Text(
-              'Confirm Box Move',
-              style: TextStyle(fontWeight: FontWeight.bold),
+            child: Text(
+              l.scanConfirmMove,
+              style: const TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
         ],
       );
     } else if (_activeMode == 'issue') {
       if (_scannedSinglePassport == null) {
-        return const Center(
+        return Center(
           child: Padding(
-            padding: EdgeInsets.symmetric(vertical: 40),
+            padding: const EdgeInsets.symmetric(vertical: 40),
             child: Text(
-              'Scan passport QR code to initiate owner hand-over.',
-              style: TextStyle(color: AppColors.textBody, fontSize: 13),
+              l.scanIssueHint,
+              style: const TextStyle(color: AppColors.textBody, fontSize: 13),
             ),
           ),
         );
@@ -1119,9 +1146,9 @@ class _ScanPageState extends ConsumerState<ScanPage>
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text(
-            'PASSPORT READY FOR ISSUANCE',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: AppColors.textBody, letterSpacing: 0.8),
+          Text(
+            l.scanPassportReadyIssuance,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: AppColors.textBody, letterSpacing: 0.8),
           ),
           const SizedBox(height: 10),
           GlassCard(
@@ -1134,12 +1161,12 @@ class _ScanPageState extends ConsumerState<ScanPage>
                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.primaryDark),
                 ),
                 const SizedBox(height: 8),
-                Text('ID No: ${_scannedSinglePassport!.holderIdNo}', style: const TextStyle(fontSize: 13)),
-                Text('QR Code: ${_scannedSinglePassport!.qrCode}', style: const TextStyle(fontSize: 13, color: AppColors.textBody)),
+                Text('${l.boxesIdNo}: ${_scannedSinglePassport!.holderIdNo}', style: const TextStyle(fontSize: 13)),
+                Text(l.scanQrCodeValue(_scannedSinglePassport!.qrCode), style: const TextStyle(fontSize: 13, color: AppColors.textBody)),
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    const Text('Current Custody: '),
+                    Text(l.scanCurrentCustody),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
@@ -1147,7 +1174,7 @@ class _ScanPageState extends ConsumerState<ScanPage>
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        _scannedSinglePassport!.status,
+                        _passportStatusLabel(l, _scannedSinglePassport!.status),
                         style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primary),
                       ),
                     ),
@@ -1167,7 +1194,7 @@ class _ScanPageState extends ConsumerState<ScanPage>
                     side: const BorderSide(color: AppColors.border),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   ),
-                  child: const Text('Cancel'),
+                  child: Text(l.cancel),
                 ),
               ),
               const SizedBox(width: 12),
@@ -1179,7 +1206,7 @@ class _ScanPageState extends ConsumerState<ScanPage>
                     minimumSize: const Size(0, 48),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   ),
-                  child: const Text('Confirm Issuance', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                  child: Text(l.scanConfirmIssuance, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
                 ),
               ),
             ],
@@ -1191,16 +1218,16 @@ class _ScanPageState extends ConsumerState<ScanPage>
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Recent Scans History',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.primaryDark),
+          Text(
+            l.scanRecentHistory,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.primaryDark),
           ),
           const SizedBox(height: 10),
           _recentScans.isEmpty
               ? Container(
                   padding: const EdgeInsets.symmetric(vertical: 40),
-                  child: const Center(
-                    child: Text('No scans recorded in this session', style: TextStyle(fontSize: 12, color: AppColors.textBody)),
+                  child: Center(
+                    child: Text(l.scanNoScans, style: const TextStyle(fontSize: 12, color: AppColors.textBody)),
                   ),
                 )
               : ListView.builder(
