@@ -16,6 +16,7 @@ class BoxesPage extends StatefulWidget {
 class _BoxesPageState extends State<BoxesPage> {
   final BoxRepository _boxRepo = BoxRepository();
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
 
   String _searchQuery = '';
   String _activeFilter = 'ALL'; // 'ALL', 'ACTIVE', 'FULL', 'INACTIVE'
@@ -24,31 +25,52 @@ class _BoxesPageState extends State<BoxesPage> {
 
   List<models.Box> _boxes = [];
 
+  // Backend pagination (infinite scroll)
+  static const int _pageLimit = 20;
+  int _page = 1;
+  bool _hasMore = true;
+  bool _isLoadingMore = false;
+
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScroll);
     _fetchBoxes();
   }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
+  void _onScroll() {
+    if (!_hasMore || _isLoadingMore || _isLoading) return;
+    final pos = _scrollController.position;
+    if (pos.pixels >= pos.maxScrollExtent - 320) {
+      _loadMore();
+    }
+  }
+
+  // First page / pull-to-refresh.
   Future<void> _fetchBoxes() async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
+      _page = 1;
     });
     try {
       final results = await _boxRepo.getAll(
         status: _activeFilter == 'ALL' ? null : _activeFilter,
         search: _searchQuery.isNotEmpty ? _searchQuery : null,
+        page: 1,
+        limit: _pageLimit,
       );
       if (mounted) {
         setState(() {
           _boxes = results;
+          _hasMore = results.length == _pageLimit;
           _isLoading = false;
         });
       }
@@ -62,6 +84,30 @@ class _BoxesPageState extends State<BoxesPage> {
     }
   }
 
+  // Append the next page (infinite scroll).
+  Future<void> _loadMore() async {
+    setState(() => _isLoadingMore = true);
+    final next = _page + 1;
+    try {
+      final results = await _boxRepo.getAll(
+        status: _activeFilter == 'ALL' ? null : _activeFilter,
+        search: _searchQuery.isNotEmpty ? _searchQuery : null,
+        page: next,
+        limit: _pageLimit,
+      );
+      if (mounted) {
+        setState(() {
+          _boxes.addAll(results);
+          _page = next;
+          _hasMore = results.length == _pageLimit;
+          _isLoadingMore = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLoadingMore = false);
+    }
+  }
+
   Future<void> _onFilterChanged(String filter) async {
     setState(() => _activeFilter = filter);
     await _fetchBoxes();
@@ -71,7 +117,10 @@ class _BoxesPageState extends State<BoxesPage> {
     setState(() => _searchQuery = query);
     // If it looks like a QR code, use single-item QR lookup for speed
     if (query.toUpperCase().startsWith('BOX-')) {
-      setState(() => _isLoading = true);
+      setState(() {
+        _isLoading = true;
+        _hasMore = false;
+      });
       try {
         final box = await _boxRepo.getByQr(query.toUpperCase());
         if (mounted) {
@@ -98,6 +147,7 @@ class _BoxesPageState extends State<BoxesPage> {
         child: RefreshIndicator(
           onRefresh: _fetchBoxes,
           child: CustomScrollView(
+            controller: _scrollController,
             slivers: [
             // Premium Large Header
             SliverAppBar(
@@ -242,15 +292,15 @@ class _BoxesPageState extends State<BoxesPage> {
                   ),
                 ),
               )
-            else
+            else ...[
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
                 sliver: SliverList(
                   delegate: SliverChildBuilderDelegate(
                     (context, idx) {
                       final box = _boxes[idx];
                       return Padding(
-                        padding: const EdgeInsets.only(bottom: 12.0),
+                        padding: const EdgeInsets.only(bottom: 10.0),
                         child: _buildBoxCard(box),
                       );
                     },
@@ -258,6 +308,28 @@ class _BoxesPageState extends State<BoxesPage> {
                   ),
                 ),
               ),
+              // Infinite-scroll footer: spinner while loading more, total at the end.
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 100),
+                  child: Center(
+                    child: _isLoadingMore
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : (!_hasMore
+                            ? Text(
+                                '${_boxes.length} ${_boxes.length == 1 ? 'box' : 'boxes'}',
+                                style: const TextStyle(
+                                    fontSize: 11, color: AppColors.textBody),
+                              )
+                            : const SizedBox.shrink()),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
         ),
@@ -332,44 +404,46 @@ class _BoxesPageState extends State<BoxesPage> {
     }
 
     return GlassCard(
-      padding: const EdgeInsets.all(16.0),
-      borderRadius: 20,
+      padding: const EdgeInsets.all(14.0),
+      borderRadius: 16,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header row: Label, QR code and Status Chip
+          // Header row: Label + QR code | Status chip
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    box.label,
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.primaryDark,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      box.label,
+                      style: const TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.primaryDark,
+                      ),
                     ),
-                  ),
-                  Text(
-                    box.qrCode,
-                    style: const TextStyle(
-                      fontFamily: 'Courier',
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.onSurface,
+                    Text(
+                      box.qrCode,
+                      style: const TextStyle(
+                        fontFamily: 'Courier',
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.onSurface,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.08),
+                  color: statusColor.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: statusColor.withOpacity(0.2)),
+                  border: Border.all(color: statusColor.withValues(alpha: 0.2)),
                 ),
                 child: Text(
                   box.status,
@@ -383,20 +457,18 @@ class _BoxesPageState extends State<BoxesPage> {
               ),
             ],
           ),
-          
-          const SizedBox(height: 12),
-          const Divider(),
-          const SizedBox(height: 12),
 
-          // Location details
+          const SizedBox(height: 10),
+
+          // Location + occupancy count on one line (no separate label row)
           Row(
             children: [
-              const Icon(Icons.place_rounded, size: 14, color: AppColors.textBody),
-              const SizedBox(width: 6),
+              const Icon(Icons.place_rounded, size: 13, color: AppColors.textBody),
+              const SizedBox(width: 5),
               Expanded(
                 child: Text(
-                  box.location ?? 'HQ Storage / Unallocated Slot',
-                  style: TextStyle(
+                  box.location ?? 'Unallocated slot',
+                  style: const TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 11,
                     fontWeight: FontWeight.w500,
@@ -406,48 +478,32 @@ class _BoxesPageState extends State<BoxesPage> {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-            ],
-          ),
-          
-          const SizedBox(height: 14),
-
-          // Occupancy bar & Capacity Indicators
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
+              const SizedBox(width: 8),
               Text(
-                'Occupancy Rate',
-                style: TextStyle(
+                '${box.occupiedCount}/${box.capacity}',
+                style: const TextStyle(
                   fontFamily: 'Inter',
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textBody.withOpacity(0.8),
-                ),
-              ),
-              Text(
-                '${box.occupiedCount} / ${box.capacity} Passports',
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 11,
+                  fontSize: 12,
                   fontWeight: FontWeight.bold,
                   color: AppColors.primaryDark,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 6),
+
+          const SizedBox(height: 7),
           ClipRRect(
             borderRadius: BorderRadius.circular(6),
             child: LinearProgressIndicator(
               value: utilizationPercent,
-              minHeight: 8,
+              minHeight: 6,
               backgroundColor: AppColors.border,
               valueColor: AlwaysStoppedAnimation<Color>(utilizationColor),
             ),
           ),
-          
-          const SizedBox(height: 12),
-          
+
+          const SizedBox(height: 8),
+
           // Action button row
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
@@ -457,10 +513,13 @@ class _BoxesPageState extends State<BoxesPage> {
                   context.push('/scan?mode=move_box');
                 },
                 icon: const Icon(Icons.drive_file_move_outlined, size: 14),
-                label: const Text('Move Box', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                label: const Text('Move',
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                 style: TextButton.styleFrom(
                   foregroundColor: AppColors.primary,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  minimumSize: const Size(0, 30),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
               ),
               const SizedBox(width: 8),
@@ -469,15 +528,17 @@ class _BoxesPageState extends State<BoxesPage> {
                   _showBoxDetailSheet(context, box);
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary.withOpacity(0.08),
+                  backgroundColor: AppColors.primary.withValues(alpha: 0.08),
                   foregroundColor: AppColors.primary,
-                  minimumSize: const Size(0, 32),
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  minimumSize: const Size(0, 30),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   elevation: 0,
                   shadowColor: Colors.transparent,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
-                child: const Text('View Passports', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                child: const Text('View Passports',
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
               ),
             ],
           ),
@@ -525,30 +586,52 @@ class _BoxesPageState extends State<BoxesPage> {
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: AppColors.textBody, letterSpacing: 0.8),
               ),
               const SizedBox(height: 8),
-              Expanded(
-                child: box.passports == null || box.passports!.isEmpty
-                    ? const Center(
+              // The list endpoint (/boxes) omits the passports array — fetch the
+              // full box (with its passports) on demand when the sheet opens.
+              FutureBuilder<models.Box?>(
+                future: _boxRepo.getByQr(box.qrCode),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 28),
+                      child: Center(child: CircularProgressIndicator()),
+                    );
+                  }
+                  final passports =
+                      snapshot.data?.passports ?? <models.PassportSummary>[];
+                  if (passports.isEmpty) {
+                    return const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 20),
+                      child: Center(
                         child: Text(
                           'No passports are currently assigned to this box.',
                           style: TextStyle(color: AppColors.textBody, fontSize: 13),
                         ),
-                      )
-                    : ListView.builder(
-                        itemCount: box.passports!.length,
-                        itemBuilder: (context, idx) {
-                          final p = box.passports![idx];
-                          return ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            leading: CircleAvatar(
-                              backgroundColor: AppColors.primary.withOpacity(0.08),
-                              child: const Icon(Icons.person, color: AppColors.primary, size: 16),
-                            ),
-                            title: Text(p.holderName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                            subtitle: Text('ID No: ${p.holderIdNo} • QR: ${p.qrCode}', style: const TextStyle(fontSize: 11)),
-                          );
-                        },
                       ),
+                    );
+                  }
+                  return ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 320),
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: passports.length,
+                      itemBuilder: (context, idx) {
+                        final p = passports[idx];
+                        return ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: CircleAvatar(
+                            backgroundColor: AppColors.primary.withValues(alpha: 0.08),
+                            child: const Icon(Icons.person, color: AppColors.primary, size: 16),
+                          ),
+                          title: Text(p.holderName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                          subtitle: Text('ID No: ${p.holderIdNo} • QR: ${p.qrCode}', style: const TextStyle(fontSize: 11)),
+                        );
+                      },
+                    ),
+                  );
+                },
               ),
+              const SizedBox(height: 8),
             ],
           ),
         );
