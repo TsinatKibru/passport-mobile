@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/repositories/box_repository.dart';
 import '../../../data/models/box.dart' as models;
@@ -24,6 +24,7 @@ class _BoxesPageState extends State<BoxesPage> {
   String? _errorMessage;
 
   List<models.Box> _boxes = [];
+  bool _isGridView = false;
 
   // Backend pagination (infinite scroll)
   static const int _pageLimit = 20;
@@ -137,6 +138,69 @@ class _BoxesPageState extends State<BoxesPage> {
     await _fetchBoxes();
   }
 
+  // Scan a box QR and drop it into the search (reuses the QR-lookup path).
+  void _openScanSearch() {
+    bool handled = false;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return SizedBox(
+          height: MediaQuery.of(ctx).size.height * 0.5,
+          child: Column(
+            children: [
+              const SizedBox(height: 12),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 14),
+                child: Text(
+                  'Scan a box QR to search',
+                  style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                      color: AppColors.primaryDark),
+                ),
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: MobileScanner(
+                      onDetect: (capture) {
+                        if (handled) return;
+                        final barcode = capture.barcodes.firstOrNull;
+                        final code = barcode?.rawValue?.trim();
+                        if (code != null && code.isNotEmpty) {
+                          handled = true;
+                          Navigator.pop(ctx);
+                          _searchController.text = code;
+                          _onSearch(code);
+                        }
+                      },
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
 
 
   @override
@@ -170,12 +234,22 @@ class _BoxesPageState extends State<BoxesPage> {
               ),
               actions: [
                 IconButton(
-                  icon: const Icon(Icons.qr_code_scanner_rounded, color: AppColors.primary),
-                  onPressed: () {
-                    context.push('/scan?mode=move_box');
-                  },
+                  tooltip: _isGridView ? 'List view' : 'Grid view',
+                  icon: Icon(
+                    _isGridView
+                        ? Icons.view_agenda_outlined
+                        : Icons.grid_view_rounded,
+                    color: AppColors.primary,
+                  ),
+                  onPressed: () => setState(() => _isGridView = !_isGridView),
                 ),
-                const SizedBox(width: 8),
+                IconButton(
+                  tooltip: 'Scan box QR to search',
+                  icon: const Icon(Icons.qr_code_scanner_rounded,
+                      color: AppColors.primary),
+                  onPressed: _openScanSearch,
+                ),
+                const SizedBox(width: 4),
               ],
             ),
 
@@ -295,18 +369,32 @@ class _BoxesPageState extends State<BoxesPage> {
             else ...[
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
-                sliver: SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, idx) {
-                      final box = _boxes[idx];
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 10.0),
-                        child: _buildBoxCard(box),
-                      );
-                    },
-                    childCount: _boxes.length,
-                  ),
-                ),
+                sliver: _isGridView
+                    ? SliverGrid(
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          mainAxisSpacing: 12,
+                          crossAxisSpacing: 12,
+                          mainAxisExtent: 184,
+                        ),
+                        delegate: SliverChildBuilderDelegate(
+                          (context, idx) => _buildBoxGridCard(_boxes[idx]),
+                          childCount: _boxes.length,
+                        ),
+                      )
+                    : SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                          (context, idx) {
+                            final box = _boxes[idx];
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 10.0),
+                              child: _buildBoxCard(box),
+                            );
+                          },
+                          childCount: _boxes.length,
+                        ),
+                      ),
               ),
               // Infinite-scroll footer: spinner while loading more, total at the end.
               SliverToBoxAdapter(
@@ -508,21 +596,6 @@ class _BoxesPageState extends State<BoxesPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              TextButton.icon(
-                onPressed: () {
-                  context.push('/scan?mode=move_box');
-                },
-                icon: const Icon(Icons.drive_file_move_outlined, size: 14),
-                label: const Text('Move',
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                style: TextButton.styleFrom(
-                  foregroundColor: AppColors.primary,
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  minimumSize: const Size(0, 30),
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-              ),
-              const SizedBox(width: 8),
               ElevatedButton(
                 onPressed: () {
                   _showBoxDetailSheet(context, box);
@@ -541,6 +614,143 @@ class _BoxesPageState extends State<BoxesPage> {
                     style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Compact card for the grid view (2 columns).
+  Widget _buildBoxGridCard(models.Box box) {
+    Color statusColor;
+    switch (box.status.toUpperCase()) {
+      case 'FULL':
+        statusColor = AppColors.danger;
+        break;
+      case 'INACTIVE':
+        statusColor = AppColors.textSecondary;
+        break;
+      case 'ACTIVE':
+      default:
+        statusColor = AppColors.success;
+        break;
+    }
+    final double utilizationPercent =
+        box.capacity > 0 ? (box.occupiedCount / box.capacity) : 0;
+    Color utilizationColor = AppColors.success;
+    if (utilizationPercent > 0.85) {
+      utilizationColor = AppColors.danger;
+    } else if (utilizationPercent > 0.5) {
+      utilizationColor = AppColors.warning;
+    }
+
+    return GlassCard(
+      padding: const EdgeInsets.all(12.0),
+      borderRadius: 16,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  box.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.primaryDark,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(color: statusColor, shape: BoxShape.circle),
+              ),
+            ],
+          ),
+          const SizedBox(height: 2),
+          Text(
+            box.qrCode,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontFamily: 'Courier',
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              color: AppColors.onSurface,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              const Icon(Icons.place_rounded, size: 12, color: AppColors.textBody),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  box.location ?? 'Unallocated',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                      fontFamily: 'Inter', fontSize: 10, color: AppColors.textBody),
+                ),
+              ),
+            ],
+          ),
+          const Spacer(),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                box.status,
+                style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 9,
+                    fontWeight: FontWeight.bold,
+                    color: statusColor),
+              ),
+              Text(
+                '${box.occupiedCount}/${box.capacity}',
+                style: const TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primaryDark),
+              ),
+            ],
+          ),
+          const SizedBox(height: 5),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: LinearProgressIndicator(
+              value: utilizationPercent,
+              minHeight: 6,
+              backgroundColor: AppColors.border,
+              valueColor: AlwaysStoppedAnimation<Color>(utilizationColor),
+            ),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () => _showBoxDetailSheet(context, box),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary.withValues(alpha: 0.08),
+                foregroundColor: AppColors.primary,
+                minimumSize: const Size(0, 30),
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                elevation: 0,
+                shadowColor: Colors.transparent,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              child: const Text('View Passports',
+                  style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold)),
+            ),
           ),
         ],
       ),
