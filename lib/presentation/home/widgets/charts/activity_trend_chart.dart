@@ -77,40 +77,48 @@ class _TrendPainter extends CustomPainter {
       return Offset(x, y);
     }
 
-    // Baseline
+    // Faint horizontal gridlines for a clean line-graph feel
     final grid = Paint()
       ..color = AppColors.border
       ..strokeWidth = 1;
-    canvas.drawLine(
-      Offset(0, size.height - 0.5),
-      Offset(size.width, size.height - 0.5),
-      grid,
-    );
-
-    // Line path
-    final line = Path();
-    for (int i = 0; i < n; i++) {
-      final p = pointAt(i);
-      i == 0 ? line.moveTo(p.dx, p.dy) : line.lineTo(p.dx, p.dy);
+    for (int g = 0; g <= 2; g++) {
+      final y = padTop + usableH * (g / 2);
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), grid);
     }
 
-    // Area fill under the line
+    final pts = [for (int i = 0; i < n; i++) pointAt(i)];
+
+    // Smooth line through the points (Catmull-Rom -> cubic bezier)
+    final line = Path()..moveTo(pts.first.dx, pts.first.dy);
+    for (int i = 0; i < n - 1; i++) {
+      final p0 = pts[i == 0 ? 0 : i - 1];
+      final p1 = pts[i];
+      final p2 = pts[i + 1];
+      final p3 = pts[i + 2 < n ? i + 2 : n - 1];
+      final cp1 =
+          Offset(p1.dx + (p2.dx - p0.dx) / 6, p1.dy + (p2.dy - p0.dy) / 6);
+      final cp2 =
+          Offset(p2.dx - (p3.dx - p1.dx) / 6, p2.dy - (p3.dy - p1.dy) / 6);
+      line.cubicTo(cp1.dx, cp1.dy, cp2.dx, cp2.dy, p2.dx, p2.dy);
+    }
+
+    // Very subtle fill under the smooth line
     final area = Path.from(line)
-      ..lineTo(pointAt(n - 1).dx, size.height)
-      ..lineTo(pointAt(0).dx, size.height)
+      ..lineTo(pts.last.dx, size.height)
+      ..lineTo(pts.first.dx, size.height)
       ..close();
     final areaPaint = Paint()
       ..shader = LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: [
-          AppColors.primary.withValues(alpha: 0.22),
+          AppColors.primary.withValues(alpha: 0.10),
           AppColors.primary.withValues(alpha: 0.0),
         ],
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
     canvas.drawPath(area, areaPaint);
 
-    // Line stroke
+    // Smooth line stroke
     final stroke = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.5
@@ -122,10 +130,9 @@ class _TrendPainter extends CustomPainter {
     // Point markers
     final dot = Paint()..color = AppColors.primary;
     final dotInner = Paint()..color = Colors.white;
-    for (int i = 0; i < n; i++) {
-      final p = pointAt(i);
-      canvas.drawCircle(p, 3.5, dot);
-      canvas.drawCircle(p, 1.6, dotInner);
+    for (final p in pts) {
+      canvas.drawCircle(p, 3.2, dot);
+      canvas.drawCircle(p, 1.5, dotInner);
     }
   }
 

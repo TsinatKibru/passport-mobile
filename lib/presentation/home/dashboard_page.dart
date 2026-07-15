@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -195,14 +193,19 @@ class _HeroCard extends StatelessWidget {
       ),
       child: Stack(
         children: [
-          // Biometric fingerprint watermark, clipped to the card.
-          Positioned.fill(
-            child: IgnorePointer(
-              child: CustomPaint(painter: _HeroFingerprintPainter()),
+          // Fingerprint watermark (same glyph as the profile page), bleeding
+          // off the corner and clipped to the card.
+          Positioned(
+            right: -20,
+            bottom: -32,
+            child: Icon(
+              Icons.fingerprint_rounded,
+              size: 176,
+              color: Colors.white.withValues(alpha: 0.13),
             ),
           ),
           Padding(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -220,19 +223,19 @@ class _HeroCard extends StatelessWidget {
                         fontSize: 10,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 5),
                     Text(
                       '${stats.totalPassports}',
                       style: const TextStyle(
                         fontFamily: 'Inter',
-                        fontSize: 40,
+                        fontSize: 32,
                         fontWeight: FontWeight.w800,
                         color: Colors.white,
                         height: 1,
-                        letterSpacing: -1.5,
+                        letterSpacing: -1.2,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 2),
                     Text(
                       'passports in custody',
                       style: AppTextStyles.bodyMedium.copyWith(
@@ -244,8 +247,8 @@ class _HeroCard extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               DonutChart(
-                size: 104,
-                thickness: 11,
+                size: 82,
+                thickness: 10,
                 segments: [
                   DonutSegment(stats.totalOccupied.toDouble(), Colors.white),
                   DonutSegment(stats.totalVacant.toDouble(),
@@ -258,7 +261,7 @@ class _HeroCard extends StatelessWidget {
                       '${occ.round()}%',
                       style: const TextStyle(
                         fontFamily: 'Inter',
-                        fontSize: 20,
+                        fontSize: 16,
                         fontWeight: FontWeight.w800,
                         color: Colors.white,
                         height: 1,
@@ -269,7 +272,7 @@ class _HeroCard extends StatelessWidget {
                       'in use',
                       style: TextStyle(
                         fontFamily: 'Inter',
-                        fontSize: 9,
+                        fontSize: 8,
                         color: Colors.white.withValues(alpha: 0.7),
                       ),
                     ),
@@ -278,9 +281,9 @@ class _HeroCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 12),
           Container(height: 1, color: Colors.white.withValues(alpha: 0.15)),
-          const SizedBox(height: 14),
+          const SizedBox(height: 10),
           Row(
             children: [
               _HeroStat(value: '${stats.inBox}', label: 'In vault'),
@@ -297,51 +300,6 @@ class _HeroCard extends StatelessWidget {
       ),
     );
   }
-}
-
-class _HeroFingerprintPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.6
-      ..color = Colors.white.withValues(alpha: 0.10);
-
-    // Large biometric fingerprint bleeding in from the right edge, clipped to
-    // the card — a passport-security watermark on the storage overview.
-    final center = Offset(size.width * 1.02, size.height * 0.5);
-    for (int r = 26; r < 230; r += 13) {
-      final base = Path()
-        ..addArc(
-          Rect.fromCircle(center: center, radius: r.toDouble()),
-          math.pi * 0.5,
-          math.pi,
-        );
-
-      // Distort each ring slightly so it reads as an organic fingerprint.
-      final ridge = Path();
-      for (final metric in base.computeMetrics()) {
-        var first = true;
-        for (double d = 0; d < metric.length; d += 6) {
-          final t = metric.getTangentForOffset(d);
-          if (t == null) continue;
-          final normal = Offset(-t.vector.dy, t.vector.dx);
-          final wobble = math.sin(d * 0.045 + r) * 1.6;
-          final p = t.position + normal * wobble;
-          if (first) {
-            ridge.moveTo(p.dx, p.dy);
-            first = false;
-          } else {
-            ridge.lineTo(p.dx, p.dy);
-          }
-        }
-      }
-      canvas.drawPath(ridge, paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _HeroStat extends StatelessWidget {
