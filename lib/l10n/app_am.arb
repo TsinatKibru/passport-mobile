@@ -212,5 +212,26 @@
   "scanPassportBullet": "• {name} ({qr})",
   "scanTargetBox": "ዒላማ ሳጥን፦ {label}",
   "scanScannedPassportsCount": "የተቃኙ ፓስፖርቶች ({count})",
-  "scanCurrentLocation": "አሁናዊ አካባቢ፦ {location}"
+  "scanCurrentLocation": "አሁናዊ አካባቢ፦ {location}",
+
+  "issuePageTitle": "ፓስፖርት አሰጣጥ",
+  "issueSearchHint": "ስም፣ መታወቂያ ቁጥር ወይም QR ኮድ…",
+  "issueFilterInBox": "በሳጥን ውስጥ",
+  "issueFilterIssued": "የተሰጡ",
+  "issueFilterAll": "ሁሉም",
+  "issueConfirmIdentity": "ማንነት አረጋግጦ ስጥ",
+  "issueLoadMore": "ተጨማሪ ጫን",
+  "issueEndOfList": "— የዝርዝሩ መጨረሻ —",
+  "issueEmptySearch": "ከፍለጋዎ ጋር የሚዛመድ ፓስፖርት የለም።",
+  "issueEmptyInBox": "ሁሉም ፓስፖርቶች ተሰጥተዋል።",
+  "issueEmptyIssued": "በአሁኑ ጊዜ የተሰጠ ፓስፖርት የለም።",
+  "issueEmptyDefault": "ምንም ፓስፖርት አልተገኘም።",
+  "issueLoadFailed": "ፓስፖርቶችን መጫን አልተሳካም። እንደገና ለመሞከር ይንኩ።",
+  "issueFailed": "አሰጣጥ አልተሳካም — እባክዎ እንደገና ይሞክሩ።",
+  "issueScanToConfirm": "ለማረጋገጥ ይቃኙ",
+  "issuePointCamera": "ማንነትን ለማረጋገጥ ካሜራውን ወደ ፓስፖርቱ QR ኮድ ያመልክቱ።",
+  "issueLoaded": "{count} ተጫኗል",
+  "issueIdLabel": "መታወቂያ፦ {id}",
+  "issueIssuedTo": "ለ{name} ተሰጥቷል",
+  "issueWrongQr": "የተሳሳተ QR — የሚጠበቀው {qr}"
 }

@@ -3,23 +3,26 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/repositories/passport_repository.dart';
 import '../../../data/models/passport.dart';
+import '../../../l10n/app_localizations.dart';
 import '../widgets/fingerprint_background.dart';
 
 // ─── Status filter options ────────────────────────────────────────────────────
 enum _StatusFilter { inBox, issued, all }
 
 extension _StatusFilterExt on _StatusFilter {
-  String get label => switch (this) {
-    _StatusFilter.inBox   => 'In Box',
-    _StatusFilter.issued  => 'Issued',
-    _StatusFilter.all     => 'All',
-  };
   String? get apiValue => switch (this) {
     _StatusFilter.inBox  => 'IN_BOX',
     _StatusFilter.issued => 'ISSUED',
     _StatusFilter.all    => null,
   };
 }
+
+// Localised label for a status filter (the enum has no BuildContext).
+String _filterLabel(AppLocalizations l, _StatusFilter f) => switch (f) {
+  _StatusFilter.inBox  => l.issueFilterInBox,
+  _StatusFilter.issued => l.issueFilterIssued,
+  _StatusFilter.all    => l.issueFilterAll,
+};
 
 class PassportIssuePage extends StatefulWidget {
   const PassportIssuePage({super.key});
@@ -106,7 +109,7 @@ class _PassportIssuePageState extends State<PassportIssuePage> {
       setState(() {
         _isLoading = false;
         _isLoadingMore = false;
-        _errorMessage = 'Failed to load passports. Tap to retry.';
+        _errorMessage = AppLocalizations.of(context).issueLoadFailed;
       });
     }
   }
@@ -146,11 +149,12 @@ class _PassportIssuePageState extends State<PassportIssuePage> {
           setState(() => _isLoading = true);
           final success = await _passportRepo.issue(passport.id);
           setState(() => _isLoading = false);
+          final l = AppLocalizations.of(context);
           if (success) {
-            _showFeedback('Issued to ${passport.holderName}', false);
+            _showFeedback(l.issueIssuedTo(passport.holderName), false);
             _fetchPassports(refresh: true);
           } else {
-            _showFeedback('Issue failed — please try again.', true);
+            _showFeedback(l.issueFailed, true);
           }
         },
       ),
@@ -189,9 +193,9 @@ class _PassportIssuePageState extends State<PassportIssuePage> {
                 expandedHeight: 100,
                 flexibleSpace: FlexibleSpaceBar(
                   titlePadding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
-                  title: const Text(
-                    'Passport Issuance',
-                    style: TextStyle(
+                  title: Text(
+                    AppLocalizations.of(context).issuePageTitle,
+                    style: const TextStyle(
                       fontFamily: 'Inter',
                       fontSize: 18,
                       fontWeight: FontWeight.w800,
@@ -318,7 +322,7 @@ class _SearchBar extends StatelessWidget {
             fontWeight: FontWeight.w500,
           ),
           decoration: InputDecoration(
-            hintText: 'Name, ID number, or QR code…',
+            hintText: AppLocalizations.of(context).issueSearchHint,
             hintStyle: const TextStyle(
               fontFamily: 'Inter',
               fontSize: 13,
@@ -363,6 +367,7 @@ class _FilterChipRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
       child: Row(
@@ -370,7 +375,7 @@ class _FilterChipRow extends StatelessWidget {
           ..._StatusFilter.values.map((f) => Padding(
             padding: const EdgeInsets.only(right: 8),
             child: _Chip(
-              label: f.label,
+              label: _filterLabel(l, f),
               isActive: f == active,
               onTap: () => onChanged(f),
             ),
@@ -378,7 +383,7 @@ class _FilterChipRow extends StatelessWidget {
           const Spacer(),
           if (loaded > 0)
             Text(
-              '$loaded loaded',
+              l.issueLoaded(loaded),
               style: const TextStyle(
                 fontFamily: 'Inter',
                 fontSize: 11,
@@ -465,9 +470,10 @@ class _PassportCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final isInBox = passport.status == 'IN_BOX';
     final statusColor = isInBox ? AppColors.primary : AppColors.warning;
-    final statusLabel = isInBox ? 'In Box' : 'Issued';
+    final statusLabel = isInBox ? l.issueFilterInBox : l.issueFilterIssued;
 
     return Container(
       decoration: BoxDecoration(
@@ -511,7 +517,7 @@ class _PassportCard extends StatelessWidget {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'ID: ${passport.holderIdNo}',
+                          l.issueIdLabel(passport.holderIdNo),
                           style: const TextStyle(
                             fontFamily: 'Inter',
                             fontSize: 12,
@@ -555,7 +561,7 @@ class _PassportCard extends StatelessWidget {
                       ),
                     ),
                     icon: const Icon(Icons.assignment_turned_in_rounded, size: 16),
-                    label: const Text('Confirm Identity & Issue'),
+                    label: Text(l.issueConfirmIdentity),
                   ),
                 ),
             ],
@@ -766,7 +772,7 @@ class _LoadMoreButton extends StatelessWidget {
         child: OutlinedButton.icon(
           onPressed: onTap,
           icon: const Icon(Icons.expand_more_rounded, size: 16),
-          label: const Text('Load more'),
+          label: Text(AppLocalizations.of(context).issueLoadMore),
           style: OutlinedButton.styleFrom(
             foregroundColor: AppColors.primary,
             side: const BorderSide(color: AppColors.primary),
@@ -782,12 +788,12 @@ class _EndOfListLabel extends StatelessWidget {
   const _EndOfListLabel();
   @override
   Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.symmetric(vertical: 20),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 20),
       child: Center(
         child: Text(
-          '— End of list —',
-          style: TextStyle(
+          AppLocalizations.of(context).issueEndOfList,
+          style: const TextStyle(
             fontFamily: 'Inter',
             fontSize: 12,
             color: AppColors.textHint,
@@ -822,7 +828,7 @@ class _ErrorState extends StatelessWidget {
             ElevatedButton.icon(
               onPressed: onRetry,
               icon: const Icon(Icons.refresh_rounded, size: 16),
-              label: const Text('Retry'),
+              label: Text(AppLocalizations.of(context).retry),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -842,13 +848,14 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final message = hasSearch
-        ? 'No passports match your search.'
+        ? l.issueEmptySearch
         : filter == _StatusFilter.inBox
-            ? 'All passports have been issued.'
+            ? l.issueEmptyInBox
             : filter == _StatusFilter.issued
-                ? 'No issued passports at the moment.'
-                : 'No passports found.';
+                ? l.issueEmptyIssued
+                : l.issueEmptyDefault;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -1081,7 +1088,8 @@ class _IssueScanSheetState extends State<_IssueScanSheet> {
     if (code == widget.passport.qrCode) {
       widget.onVerified();
     } else {
-      setState(() => _errorMsg = 'Wrong QR — expected ${widget.passport.qrCode}');
+      setState(() => _errorMsg =
+          AppLocalizations.of(context).issueWrongQr(widget.passport.qrCode));
       Future.delayed(const Duration(seconds: 3), () {
         if (mounted) setState(() { _errorMsg = null; _isScanning = true; });
       });
@@ -1108,9 +1116,9 @@ class _IssueScanSheetState extends State<_IssueScanSheet> {
             ),
           ),
           const SizedBox(height: 20),
-          const Text(
-            'Scan to Confirm',
-            style: TextStyle(
+          Text(
+            AppLocalizations.of(context).issueScanToConfirm,
+            style: const TextStyle(
               fontFamily: 'Inter',
               fontSize: 18,
               fontWeight: FontWeight.w800,
@@ -1155,10 +1163,10 @@ class _IssueScanSheetState extends State<_IssueScanSheet> {
               ),
             )
           else
-            const Text(
-              'Point the camera at the passport QR code to confirm identity.',
+            Text(
+              AppLocalizations.of(context).issuePointCamera,
               textAlign: TextAlign.center,
-              style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: AppColors.textBody),
+              style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: AppColors.textBody),
             ),
           const SizedBox(height: 20),
           SizedBox(
@@ -1171,7 +1179,7 @@ class _IssueScanSheetState extends State<_IssueScanSheet> {
                 minimumSize: const Size.fromHeight(46),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
-              child: const Text('Cancel', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600)),
+              child: Text(AppLocalizations.of(context).cancel, style: const TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600)),
             ),
           ),
         ],
