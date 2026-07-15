@@ -94,10 +94,11 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
     _lastFeedbackTime = now;
 
     if (!mounted) return;
+    final c = context.colors;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message, style: const TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: isError ? AppColors.danger : AppColors.success,
+        backgroundColor: isError ? c.danger : c.success,
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 2),
       ),
@@ -368,13 +369,14 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
 
   void _showMismatchOptionsDialog(models.Box scannedBox) {
     final l = AppLocalizations.of(context);
+    final c = context.colors;
     final fits = (scannedBox.capacity - scannedBox.occupiedCount) >= _scannedPassports.length;
 
     showModalBottomSheet(
       context: context,
       isDismissible: false,
       enableDrag: false,
-      backgroundColor: Colors.white,
+      backgroundColor: c.card,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
@@ -386,11 +388,11 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
           children: [
             Row(
               children: [
-                const Icon(Icons.warning_amber_rounded, color: AppColors.warning, size: 28),
+                Icon(Icons.warning_amber_rounded, color: c.warning, size: 28),
                 const SizedBox(width: 12),
                 Text(
                   l.returnMismatchTitle,
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primaryDark),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: c.primaryDark),
                 ),
               ],
             ),
@@ -401,7 +403,7 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
                 scannedBox.label,
                 scannedBox.location ?? l.returnUnassignedLocation,
               ),
-              style: const TextStyle(fontSize: 14, color: AppColors.primaryDark, height: 1.4),
+              style: TextStyle(fontSize: 14, color: c.primaryDark, height: 1.4),
             ),
             const SizedBox(height: 12),
             if (!fits)
@@ -413,7 +415,7 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
               Text(
                 l.returnMismatchFits(
                     scannedBox.capacity - scannedBox.occupiedCount, _scannedPassports.length),
-                style: const TextStyle(color: AppColors.textBody, fontSize: 13),
+                style: TextStyle(color: c.textBody, fontSize: 13),
               ),
             const SizedBox(height: 24),
             Row(
@@ -432,8 +434,8 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
                   Expanded(
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
+                        backgroundColor: c.primary,
+                        foregroundColor: c.onPrimary,
                       ),
                       onPressed: () {
                         Navigator.pop(ctx);
@@ -501,13 +503,14 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
 
   void _showSuccessDialog() {
     final l = AppLocalizations.of(context);
+    final c = context.colors;
     final count = _scannedPassports.length;
 
     showModalBottomSheet(
       context: context,
       isDismissible: false,
       enableDrag: false,
-      backgroundColor: Colors.white,
+      backgroundColor: c.card,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
@@ -519,9 +522,9 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
             Container(
               width: double.infinity,
               padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
-              decoration: const BoxDecoration(
-                color: AppColors.success,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+              decoration: BoxDecoration(
+                color: c.success,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
               ),
               child: Column(
                 children: [
@@ -552,8 +555,8 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
                 children: _scannedPassports
                     .map((p) => Chip(
                           label: Text(p.holderName, style: const TextStyle(fontSize: 11.5)),
-                          backgroundColor: AppColors.surface,
-                          side: BorderSide(color: AppColors.border),
+                          backgroundColor: c.surface,
+                          side: BorderSide(color: c.border),
                           visualDensity: VisualDensity.compact,
                           materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         ))
@@ -615,8 +618,9 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: c.surface,
       body: FingerprintBackground(
         child: Column(
           children: [
@@ -627,11 +631,11 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
                 child: Row(
                   children: [
                     Material(
-                      color: Colors.white,
+                      color: c.card,
                       shape: const CircleBorder(),
                       child: IconButton(
-                        icon: const Icon(Icons.arrow_back_rounded,
-                            color: AppColors.primaryDark, size: 20),
+                        icon: Icon(Icons.arrow_back_rounded,
+                            color: c.primaryDark, size: 20),
                         onPressed: _goBack,
                       ),
                     ),
@@ -639,10 +643,10 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
                     Expanded(
                       child: Text(
                         AppLocalizations.of(context).returnFlowTitle,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: AppColors.primaryDark,
+                          color: c.primaryDark,
                         ),
                       ),
                     ),
@@ -660,6 +664,7 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
 
   Widget _buildStepIndicator() {
     final l = AppLocalizations.of(context);
+    final c = context.colors;
     final stepLabels = [l.returnStepScan, l.returnStepSelectBox, l.returnStepScanBox];
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 4, 24, 18),
@@ -681,21 +686,21 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
                       height: 26,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: isActive ? AppColors.primary : Colors.white,
+                        color: isActive ? c.primary : c.card,
                         border: Border.all(
-                          color: isActive ? AppColors.primary : AppColors.border,
+                          color: isActive ? c.primary : c.border,
                           width: 1.5,
                         ),
                       ),
                       child: Center(
                         child: isDone
-                            ? const Icon(Icons.check_rounded, size: 15, color: Colors.white)
+                            ? Icon(Icons.check_rounded, size: 15, color: c.onPrimary)
                             : Text(
                                 '$stepNum',
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold,
-                                  color: isActive ? Colors.white : AppColors.textHint,
+                                  color: isActive ? c.onPrimary : c.textHint,
                                 ),
                               ),
                       ),
@@ -706,7 +711,7 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
                       style: TextStyle(
                         fontSize: 10.5,
                         fontWeight: isCurrent ? FontWeight.bold : FontWeight.w500,
-                        color: isActive ? AppColors.primaryDark : AppColors.textHint,
+                        color: isActive ? c.primaryDark : c.textHint,
                       ),
                     ),
                   ],
@@ -719,7 +724,7 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
                         duration: const Duration(milliseconds: 200),
                         height: 2,
                         margin: const EdgeInsets.symmetric(horizontal: 4),
-                        color: stepNum < _currentStep ? AppColors.primary : AppColors.border,
+                        color: stepNum < _currentStep ? c.primary : c.border,
                       ),
                     ),
                   ),
@@ -746,6 +751,7 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
 
   Widget _buildStep1() {
     final l = AppLocalizations.of(context);
+    final c = context.colors;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
       child: Column(
@@ -792,17 +798,17 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
                   children: [
                     Text(
                       l.returnScannedStack(_scannedPassports.length),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
-                        color: AppColors.primaryDark,
+                        color: c.primaryDark,
                       ),
                     ),
                     const Spacer(),
                     if (_scannedPassports.isNotEmpty)
                       TextButton(
                         onPressed: _clearScannedPassports,
-                        child: Text(l.returnClearAll, style: const TextStyle(color: AppColors.danger)),
+                        child: Text(l.returnClearAll, style: TextStyle(color: c.danger)),
                       ),
                   ],
                 ),
@@ -820,10 +826,10 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
                             return _FlatCard(
                               child: ListTile(
                                 contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-                                leading: const CircleAvatar(
-                                  backgroundColor: AppColors.primary,
-                                  foregroundColor: Colors.white,
-                                  child: Icon(Icons.contact_mail_rounded, size: 18),
+                                leading: CircleAvatar(
+                                  backgroundColor: c.primary,
+                                  foregroundColor: c.onPrimary,
+                                  child: const Icon(Icons.contact_mail_rounded, size: 18),
                                 ),
                                 title: Text(
                                   passport.holderName,
@@ -831,8 +837,8 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
                                 ),
                                 subtitle: Text(l.returnPassportSubtitle(passport.qrCode, passport.holderIdNo)),
                                 trailing: IconButton(
-                                  icon: const Icon(Icons.remove_circle_outline,
-                                      color: AppColors.danger),
+                                  icon: Icon(Icons.remove_circle_outline,
+                                      color: c.danger),
                                   onPressed: () => _removePassport(idx),
                                 ),
                               ),
@@ -860,6 +866,7 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
 
   Widget _buildStep2() {
     final l = AppLocalizations.of(context);
+    final c = context.colors;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
       child: Column(
@@ -867,11 +874,11 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
         children: [
           Text(
             l.returnSelectTargetBox,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.primaryDark),
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: c.primaryDark),
           ),
           Text(
             l.returnShowingBoxes(_scannedPassports.length),
-            style: const TextStyle(color: AppColors.textBody, fontSize: 12),
+            style: TextStyle(color: c.textBody, fontSize: 12),
           ),
           const SizedBox(height: 16),
           _buildRoomFilter(),
@@ -881,7 +888,7 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
           if (_totalBoxes > 0)
             Text(
               l.returnFoundBoxes(_totalBoxes, _currentPage, _totalPages),
-              style: const TextStyle(fontSize: 11, color: AppColors.textBody),
+              style: TextStyle(fontSize: 11, color: c.textBody),
             ),
           const SizedBox(height: 16),
           Expanded(
@@ -894,6 +901,7 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
 
   Widget _buildRoomFilter() {
     final l = AppLocalizations.of(context);
+    final c = context.colors;
     if (_isLoadingRooms) {
       return const LinearProgressIndicator(minHeight: 2);
     }
@@ -902,9 +910,9 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: c.card,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: c.border),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String?>(
@@ -922,14 +930,15 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
   }
 
   Widget _buildSearchField() {
+    final c = context.colors;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: c.card,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: c.border),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primaryDark.withValues(alpha: 0.04),
+            color: c.primaryDark.withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, 3),
           ),
@@ -1010,7 +1019,8 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
 
   Widget _buildBoxCard(models.Box box, int vacantSlots, bool fits) {
     final l = AppLocalizations.of(context);
-    final spaceColor = fits ? AppColors.success : AppColors.danger;
+    final c = context.colors;
+    final spaceColor = fits ? c.success : c.danger;
 
     return _FlatCard(
       onTap: fits ? () => _selectBox(box) : null,
@@ -1022,12 +1032,12 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: (fits ? AppColors.primary : AppColors.textHint).withValues(alpha: 0.1),
+                color: (fits ? c.primary : c.textHint).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(
                 Icons.inventory_2_outlined,
-                color: fits ? AppColors.primary : AppColors.textHint,
+                color: fits ? c.primary : c.textHint,
               ),
             ),
             const SizedBox(width: 12),
@@ -1039,7 +1049,7 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
                   if (box.location != null)
                     Text(
                       box.location!,
-                      style: const TextStyle(fontSize: 11, color: AppColors.textHint),
+                      style: TextStyle(fontSize: 11, color: c.textHint),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -1060,7 +1070,7 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
             ),
             if (fits) ...[
               const SizedBox(width: 4),
-              const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.textHint),
+              Icon(Icons.arrow_forward_ios_rounded, size: 14, color: c.textHint),
             ],
           ],
         ),
@@ -1096,6 +1106,7 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
 
   Widget _buildStep3() {
     final l = AppLocalizations.of(context);
+    final c = context.colors;
     final boxVerified = _scannedBoxQr != null;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
@@ -1113,12 +1124,12 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
             ],
             Text(
               boxVerified ? l.returnConfirmReturn : l.returnVerifyPhysicalBox,
-              style: const TextStyle(
-                  fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.primaryDark),
+              style: TextStyle(
+                  fontWeight: FontWeight.bold, fontSize: 18, color: c.primaryDark),
             ),
             Text(
               boxVerified ? l.returnBoxVerifiedDesc : l.returnScanBoxDesc,
-              style: const TextStyle(color: AppColors.textBody, fontSize: 12),
+              style: TextStyle(color: c.textBody, fontSize: 12),
             ),
             const SizedBox(height: 16),
             if (!boxVerified) ...[
@@ -1188,6 +1199,7 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
 
   Widget _buildBoxInfoCard() {
     final l = AppLocalizations.of(context);
+    final c = context.colors;
     return _FlatCard(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -1200,10 +1212,10 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.1),
+                    color: c.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.inventory_2_outlined, color: AppColors.primary),
+                  child: Icon(Icons.inventory_2_outlined, color: c.primary),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -1216,7 +1228,7 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
                       ),
                       Text(
                         l.returnCapacity(_selectedBox!.occupiedCount, _selectedBox!.capacity),
-                        style: const TextStyle(fontSize: 12, color: AppColors.textBody),
+                        style: TextStyle(fontSize: 12, color: c.textBody),
                       ),
                     ],
                   ),
@@ -1226,12 +1238,12 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
             const Divider(height: 24),
             Text(
               l.returnExpectedQr(_selectedBox!.qrCode),
-              style: const TextStyle(fontSize: 12, color: AppColors.textBody, fontFamily: 'monospace'),
+              style: TextStyle(fontSize: 12, color: c.textBody, fontFamily: 'monospace'),
             ),
             const SizedBox(height: 4),
             Text(
               l.returnExpectedLocation(_selectedBox!.location ?? l.returnUnassigned),
-              style: const TextStyle(fontSize: 12, color: AppColors.textBody),
+              style: TextStyle(fontSize: 12, color: c.textBody),
             ),
           ],
         ),
@@ -1241,6 +1253,7 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
 
   Widget _buildVerifiedBoxCard() {
     final l = AppLocalizations.of(context);
+    final c = context.colors;
     return _FlatCard(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -1253,10 +1266,10 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: AppColors.success.withOpacity(0.1),
+                    color: c.success.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.check_circle_rounded, color: AppColors.success),
+                  child: Icon(Icons.check_circle_rounded, color: c.success),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -1269,7 +1282,7 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
                       ),
                       Text(
                         l.returnReturningCount(_scannedPassports.length),
-                        style: const TextStyle(fontSize: 12, color: AppColors.textBody),
+                        style: TextStyle(fontSize: 12, color: c.textBody),
                       ),
                     ],
                   ),
@@ -1279,7 +1292,7 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
             const Divider(height: 24),
             Text(
               l.returnExpectedLocation(_selectedBox!.location ?? l.returnUnassigned),
-              style: const TextStyle(fontSize: 12, color: AppColors.textBody),
+              style: TextStyle(fontSize: 12, color: c.textBody),
             ),
           ],
         ),
@@ -1360,9 +1373,10 @@ class _CountBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(20)),
+      decoration: BoxDecoration(color: c.primary, borderRadius: BorderRadius.circular(20)),
       child: Text(
         '$count $label',
         style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
@@ -1378,14 +1392,15 @@ class _FlatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: c.card,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: c.border),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primaryDark.withOpacity(0.04),
+            color: c.primaryDark.withOpacity(0.04),
             blurRadius: 10,
             offset: const Offset(0, 3),
           ),
@@ -1407,13 +1422,14 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 48, color: AppColors.textHint),
+          Icon(icon, size: 48, color: c.textHint),
           const SizedBox(height: 8),
-          Text(message, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textBody)),
+          Text(message, textAlign: TextAlign.center, style: TextStyle(color: c.textBody)),
         ],
       ),
     );
@@ -1427,38 +1443,39 @@ class _MismatchBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return ClipRRect(
       borderRadius: BorderRadius.circular(12),
       child: IntrinsicHeight(
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Container(width: 4, color: AppColors.warning),
+            Container(width: 4, color: c.warning),
             Expanded(
               child: Container(
-                color: AppColors.warning.withOpacity(0.1),
+                color: c.warning.withOpacity(0.1),
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    const Icon(Icons.warning_amber_rounded, color: AppColors.warning, size: 18),
+                    Icon(Icons.warning_amber_rounded, color: c.warning, size: 18),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         message,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12.5,
                           fontWeight: FontWeight.w600,
-                          color: AppColors.primaryDark,
+                          color: c.primaryDark,
                         ),
                       ),
                     ),
                     InkWell(
                       onTap: onDismiss,
                       borderRadius: BorderRadius.circular(12),
-                      child: const Padding(
-                        padding: EdgeInsets.all(4),
-                        child: Icon(Icons.close_rounded, size: 16, color: AppColors.textHint),
+                      child: Padding(
+                        padding: const EdgeInsets.all(4),
+                        child: Icon(Icons.close_rounded, size: 16, color: c.textHint),
                       ),
                     ),
                   ],
