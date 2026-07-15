@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/auth_provider.dart';
 import '../../../core/locale_provider.dart';
+import '../../../core/theme_provider.dart';
 import '../../../core/providers/dashboard_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/analytics.dart';
@@ -25,9 +26,10 @@ class ProfilePage extends ConsumerWidget {
         .watch(myActivityProvider)
         .maybeWhen(data: (v) => v, orElse: () => null);
     final l = AppLocalizations.of(context);
+    final c = context.colors;
 
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: c.surface,
       body: FingerprintBackground(
         child: CustomScrollView(
           slivers: [
@@ -36,7 +38,7 @@ class ProfilePage extends ConsumerWidget {
               expandedHeight: 120,
               floating: false,
               pinned: true,
-              backgroundColor: Colors.white,
+              backgroundColor: c.appBar,
               elevation: 0,
               flexibleSpace: FlexibleSpaceBar(
                 titlePadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -46,13 +48,13 @@ class ProfilePage extends ConsumerWidget {
                     fontFamily: 'Inter',
                     fontSize: 20,
                     fontWeight: FontWeight.w800,
-                    color: AppColors.primaryDark,
+                    color: c.primaryDark,
                   ),
                 ),
               ),
               actions: [
                 IconButton(
-                  icon: const Icon(Icons.logout_rounded, color: AppColors.danger),
+                  icon: Icon(Icons.logout_rounded, color: c.danger),
                   onPressed: () {
                     _showLogoutConfirm(context, ref);
                   },
@@ -73,35 +75,45 @@ class ProfilePage extends ConsumerWidget {
                     const SizedBox(height: 24),
 
                     // Stats section
-                    _buildStatsSection(l, activity),
+                    _buildStatsSection(context, l, activity),
                     const SizedBox(height: 24),
-                    
+
                     // Options List
                     Text(
                       l.accountSettings,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontFamily: 'Inter',
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
-                        color: AppColors.textBody,
+                        color: c.textBody,
                         letterSpacing: 0.8,
                       ),
                     ),
                     const SizedBox(height: 10),
 
                     _buildOptionTile(
+                      context: context,
                       icon: Icons.lock_outline_rounded,
                       title: l.changePassword,
                       subtitle: l.changePasswordDesc,
                       onTap: () => _showChangePasswordDialog(context, ref),
                     ),
                     _buildOptionTile(
+                      context: context,
                       icon: Icons.translate_rounded,
                       title: l.appLanguage,
                       subtitle: _languageLabel(l, ref.watch(localeProvider)),
                       onTap: () => _showLanguagePicker(context, ref),
                     ),
                     _buildOptionTile(
+                      context: context,
+                      icon: Icons.dark_mode_outlined,
+                      title: l.appTheme,
+                      subtitle: _themeLabel(l, ref.watch(themeProvider)),
+                      onTap: () => _showThemePicker(context, ref),
+                    ),
+                    _buildOptionTile(
+                      context: context,
                       icon: Icons.info_outline_rounded,
                       title: l.aboutSystem,
                       subtitle: l.aboutSystemDesc,
@@ -110,9 +122,9 @@ class ProfilePage extends ConsumerWidget {
                             context, l.aboutInfoTitle, l.aboutInfoBody);
                       },
                     ),
-                    
+
                     const SizedBox(height: 32),
-                    
+
                     // System info footer
                     Text(
                       l.orgFooter,
@@ -121,7 +133,7 @@ class ProfilePage extends ConsumerWidget {
                         fontFamily: 'Inter',
                         fontSize: 10,
                         fontWeight: FontWeight.w600,
-                        color: AppColors.textBody.withOpacity(0.5),
+                        color: c.textBody.withOpacity(0.5),
                         letterSpacing: 0.5,
                       ),
                     ),
@@ -139,15 +151,17 @@ class ProfilePage extends ConsumerWidget {
   Widget _buildStaffIdCard(BuildContext context, AppLocalizations l, String name,
       String email, String role, String staffId, bool isActive,
       String memberSince) {
+    final c = context.colors;
     return GlassCard(
       padding: EdgeInsets.zero,
       borderRadius: 24,
+      borderColor: c.border,
       gradient: LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [
-          Colors.white,
-          AppColors.surfaceVariant.withOpacity(0.5),
+          c.card,
+          c.surfaceVariant.withOpacity(0.5),
         ],
       ),
       child: Stack(
@@ -159,7 +173,7 @@ class ProfilePage extends ConsumerWidget {
             child: Icon(
               Icons.fingerprint_rounded,
               size: 160,
-              color: AppColors.primary.withOpacity(0.04),
+              color: c.primary.withOpacity(0.04),
             ),
           ),
           
@@ -178,29 +192,29 @@ class ProfilePage extends ConsumerWidget {
                       errorBuilder: (context, error, stackTrace) => Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: AppColors.primary,
+                          color: c.primary,
                           borderRadius: BorderRadius.circular(6),
                         ),
-                        child: const Text(
+                        child: Text(
                           'ICS',
-                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                          style: TextStyle(color: c.onPrimary, fontWeight: FontWeight.bold, fontSize: 12),
                         ),
                       ),
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.08),
+                        color: c.primary.withOpacity(0.08),
                         borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+                        border: Border.all(color: c.primary.withOpacity(0.2)),
                       ),
                       child: Text(
                         role,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontFamily: 'Inter',
                           fontSize: 9,
                           fontWeight: FontWeight.bold,
-                          color: AppColors.primary,
+                          color: c.primary,
                         ),
                       ),
                     ),
@@ -213,14 +227,14 @@ class ProfilePage extends ConsumerWidget {
                   children: [
                     CircleAvatar(
                       radius: 30,
-                      backgroundColor: AppColors.primary.withOpacity(0.1),
+                      backgroundColor: c.primary.withOpacity(0.1),
                       child: Text(
                         name.isNotEmpty ? name[0].toUpperCase() : 'O',
                         style: TextStyle(
                           fontFamily: 'Inter',
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
-                          color: AppColors.primary,
+                          color: c.primary,
                         ),
                       ),
                     ),
@@ -235,7 +249,7 @@ class ProfilePage extends ConsumerWidget {
                               fontFamily: 'Inter',
                               fontSize: 18,
                               fontWeight: FontWeight.w800,
-                              color: AppColors.primaryDark,
+                              color: c.primaryDark,
                             ),
                           ),
                           const SizedBox(height: 2),
@@ -244,17 +258,17 @@ class ProfilePage extends ConsumerWidget {
                             style: TextStyle(
                               fontFamily: 'Inter',
                               fontSize: 12,
-                              color: AppColors.textBody,
+                              color: c.textBody,
                             ),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             'STAFF ID: $staffId',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontFamily: 'Courier',
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
-                              color: AppColors.onSurface,
+                              color: c.onSurface,
                             ),
                           ),
                         ],
@@ -271,10 +285,10 @@ class ProfilePage extends ConsumerWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _buildCardMeta(l.metaRole, role),
-                    _buildCardMeta(l.metaStatus,
+                    _buildCardMeta(context, l.metaRole, role),
+                    _buildCardMeta(context, l.metaStatus,
                         isActive ? l.statusActive : l.statusInactive),
-                    _buildCardMeta(l.metaMemberSince, memberSince),
+                    _buildCardMeta(context, l.metaMemberSince, memberSince),
                   ],
                 ),
               ],
@@ -285,7 +299,8 @@ class ProfilePage extends ConsumerWidget {
     );
   }
 
-  Widget _buildCardMeta(String label, String value) {
+  Widget _buildCardMeta(BuildContext context, String label, String value) {
+    final c = context.colors;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -295,7 +310,7 @@ class ProfilePage extends ConsumerWidget {
             fontFamily: 'Inter',
             fontSize: 9,
             fontWeight: FontWeight.bold,
-            color: AppColors.textBody.withOpacity(0.6),
+            color: c.textBody.withOpacity(0.6),
           ),
         ),
         const SizedBox(height: 2),
@@ -305,25 +320,26 @@ class ProfilePage extends ConsumerWidget {
             fontFamily: 'Inter',
             fontSize: 11,
             fontWeight: FontWeight.w700,
-            color: AppColors.primaryDark,
+            color: c.primaryDark,
           ),
         ),
       ],
     );
   }
 
-  Widget _buildStatsSection(AppLocalizations l, MyActivity? a) {
+  Widget _buildStatsSection(BuildContext context, AppLocalizations l, MyActivity? a) {
+    final c = context.colors;
     String v(int? n) => a == null ? '—' : '${n ?? 0}';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           l.activityToday,
-          style: const TextStyle(
+          style: TextStyle(
             fontFamily: 'Inter',
             fontSize: 11,
             fontWeight: FontWeight.bold,
-            color: AppColors.textBody,
+            color: c.textBody,
             letterSpacing: 0.8,
           ),
         ),
@@ -331,17 +347,17 @@ class ProfilePage extends ConsumerWidget {
         Row(
           children: [
             Expanded(
-              child: _buildMiniStatCard(l.statIssued, v(a?.issuedToday),
-                  Icons.assignment_turned_in_rounded, AppColors.success),
+              child: _buildMiniStatCard(context, l.statIssued, v(a?.issuedToday),
+                  Icons.assignment_turned_in_rounded, c.success),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: _buildMiniStatCard(l.statReturned, v(a?.returnsToday),
-                  Icons.swap_horizontal_circle_rounded, AppColors.warning),
+              child: _buildMiniStatCard(context, l.statReturned, v(a?.returnsToday),
+                  Icons.swap_horizontal_circle_rounded, c.warning),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: _buildMiniStatCard(l.statBoxMoves, v(a?.boxMovesToday),
+              child: _buildMiniStatCard(context, l.statBoxMoves, v(a?.boxMovesToday),
                   Icons.place_rounded, Colors.deepPurple),
             ),
           ],
@@ -350,10 +366,13 @@ class ProfilePage extends ConsumerWidget {
     );
   }
 
-  Widget _buildMiniStatCard(String label, String value, IconData icon, Color color) {
+  Widget _buildMiniStatCard(BuildContext context, String label, String value, IconData icon, Color color) {
+    final c = context.colors;
     return GlassCard(
       padding: const EdgeInsets.all(12),
       borderRadius: 16,
+      backgroundColor: c.card,
+      borderColor: c.border,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -365,7 +384,7 @@ class ProfilePage extends ConsumerWidget {
               fontFamily: 'Inter',
               fontSize: 22,
               fontWeight: FontWeight.w800,
-              color: AppColors.primaryDark,
+              color: c.primaryDark,
             ),
           ),
           const SizedBox(height: 2),
@@ -374,7 +393,7 @@ class ProfilePage extends ConsumerWidget {
             style: TextStyle(
               fontFamily: 'Inter',
               fontSize: 10,
-              color: AppColors.textBody,
+              color: c.textBody,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -384,11 +403,13 @@ class ProfilePage extends ConsumerWidget {
   }
 
   Widget _buildOptionTile({
+    required BuildContext context,
     required IconData icon,
     required String title,
     required String subtitle,
     required VoidCallback onTap,
   }) {
+    final c = context.colors;
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       child: Material(
@@ -399,15 +420,17 @@ class ProfilePage extends ConsumerWidget {
           child: GlassCard(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             borderRadius: 16,
+            backgroundColor: c.card,
+            borderColor: c.border,
             child: Row(
               children: [
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.06),
+                    color: c.primary.withOpacity(0.06),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(icon, color: AppColors.primary, size: 18),
+                  child: Icon(icon, color: c.primary, size: 18),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -416,20 +439,20 @@ class ProfilePage extends ConsumerWidget {
                     children: [
                       Text(
                         title,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontFamily: 'Inter',
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
-                          color: AppColors.onSurface,
+                          color: c.onSurface,
                         ),
                       ),
                       const SizedBox(height: 1),
                       Text(
                         subtitle,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontFamily: 'Inter',
                           fontSize: 11,
-                          color: AppColors.textBody,
+                          color: c.textBody,
                         ),
                       ),
                     ],
@@ -437,7 +460,7 @@ class ProfilePage extends ConsumerWidget {
                 ),
                 Icon(
                   Icons.arrow_forward_ios_rounded,
-                  color: AppColors.textBody.withOpacity(0.4),
+                  color: c.textBody.withOpacity(0.4),
                   size: 12,
                 ),
               ],
@@ -466,7 +489,7 @@ class ProfilePage extends ConsumerWidget {
               Navigator.pop(context);
               ref.read(authProvider.notifier).logout();
             },
-            style: TextButton.styleFrom(foregroundColor: AppColors.danger),
+            style: TextButton.styleFrom(foregroundColor: context.colors.danger),
             child: Text(l.logout,
                 style: const TextStyle(fontWeight: FontWeight.bold)),
           ),
@@ -488,10 +511,11 @@ class ProfilePage extends ConsumerWidget {
 
   void _showLanguagePicker(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
+    final c = context.colors;
     final current = ref.read(localeProvider);
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: c.card,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -503,7 +527,7 @@ class ProfilePage extends ConsumerWidget {
                 style: TextStyle(
                     fontWeight: selected ? FontWeight.bold : FontWeight.w500)),
             trailing: selected
-                ? const Icon(Icons.check_rounded, color: AppColors.primary)
+                ? Icon(Icons.check_rounded, color: c.primary)
                 : null,
             onTap: () {
               ref.read(localeProvider.notifier).setLocale(value);
@@ -522,15 +546,80 @@ class ProfilePage extends ConsumerWidget {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Text(l.selectLanguage,
-                      style: const TextStyle(
+                      style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
-                          color: AppColors.primaryDark)),
+                          color: c.primaryDark)),
                 ),
                 const SizedBox(height: 8),
                 option(l.languageEnglish, const Locale('en')),
                 option(l.languageAmharic, const Locale('am')),
                 option(l.languageSystem, null),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  String _themeLabel(AppLocalizations l, ThemeMode mode) {
+    switch (mode) {
+      case ThemeMode.light:
+        return l.themeLight;
+      case ThemeMode.dark:
+        return l.themeDark;
+      case ThemeMode.system:
+        return l.languageSystem;
+    }
+  }
+
+  void _showThemePicker(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context);
+    final c = context.colors;
+    final current = ref.read(themeProvider);
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: c.card,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        Widget option(String label, ThemeMode value) {
+          final selected = value == current;
+          return ListTile(
+            title: Text(label,
+                style: TextStyle(
+                    fontWeight: selected ? FontWeight.bold : FontWeight.w500)),
+            trailing: selected
+                ? Icon(Icons.check_rounded, color: c.primary)
+                : null,
+            onTap: () {
+              ref.read(themeProvider.notifier).setThemeMode(value);
+              Navigator.pop(ctx);
+            },
+          );
+        }
+
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(8, 16, 8, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Text(l.selectTheme,
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: c.primaryDark)),
+                ),
+                const SizedBox(height: 8),
+                option(l.themeLight, ThemeMode.light),
+                option(l.themeDark, ThemeMode.dark),
+                option(l.languageSystem, ThemeMode.system),
               ],
             ),
           ),
@@ -648,24 +737,25 @@ class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
     required bool obscure,
     required VoidCallback onToggle,
   }) {
+    final c = context.colors;
     return TextField(
       controller: controller,
       obscureText: obscure,
       style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: const TextStyle(color: AppColors.textBody, fontSize: 13),
+        labelStyle: TextStyle(color: c.textBody, fontSize: 13),
         filled: true,
-        fillColor: AppColors.surfaceVariant,
+        fillColor: c.surfaceVariant,
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.border),
+          borderSide: BorderSide(color: c.border),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+          borderSide: BorderSide(color: c.primary, width: 1.5),
         ),
         suffixIcon: IconButton(
           icon: Icon(
@@ -673,7 +763,7 @@ class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
                 ? Icons.visibility_off_rounded
                 : Icons.visibility_rounded,
             size: 20,
-            color: AppColors.textBody,
+            color: c.textBody,
           ),
           onPressed: onToggle,
         ),
@@ -684,14 +774,15 @@ class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    final c = context.colors;
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: SingleChildScrollView(
         child: Container(
           padding: const EdgeInsets.fromLTRB(22, 12, 22, 24),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          decoration: BoxDecoration(
+            color: c.card,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -702,7 +793,7 @@ class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: AppColors.border,
+                    color: c.border,
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -713,28 +804,28 @@ class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.08),
+                      color: c.primary.withValues(alpha: 0.08),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.lock_outline_rounded,
-                        color: AppColors.primary, size: 20),
+                    child: Icon(Icons.lock_outline_rounded,
+                        color: c.primary, size: 20),
                   ),
                   const SizedBox(width: 12),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(l.changePassword,
-                          style: const TextStyle(
+                          style: TextStyle(
                               fontFamily: 'Inter',
                               fontWeight: FontWeight.w700,
                               fontSize: 17,
-                              color: AppColors.primaryDark)),
+                              color: c.primaryDark)),
                       const SizedBox(height: 2),
                       Text(l.changePasswordDesc,
-                          style: const TextStyle(
+                          style: TextStyle(
                               fontFamily: 'Inter',
                               fontSize: 12,
-                              color: AppColors.textBody)),
+                              color: c.textBody)),
                     ],
                   ),
                 ],
@@ -765,13 +856,13 @@ class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.error_outline_rounded,
-                        color: AppColors.danger, size: 16),
+                    Icon(Icons.error_outline_rounded,
+                        color: c.danger, size: 16),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(_error!,
-                          style: const TextStyle(
-                              color: AppColors.danger, fontSize: 12)),
+                          style: TextStyle(
+                              color: c.danger, fontSize: 12)),
                     ),
                   ],
                 ),
@@ -779,7 +870,7 @@ class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
               const SizedBox(height: 10),
               Text(
                 l.passwordRule,
-                style: const TextStyle(color: AppColors.textBody, fontSize: 11),
+                style: TextStyle(color: c.textBody, fontSize: 11),
               ),
               const SizedBox(height: 20),
               SizedBox(
@@ -787,18 +878,18 @@ class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
                 child: ElevatedButton(
                   onPressed: _loading ? null : _submit,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
+                    backgroundColor: c.primary,
+                    foregroundColor: c.onPrimary,
                     minimumSize: const Size.fromHeight(50),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14)),
                   ),
                   child: _loading
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 20,
                           height: 20,
                           child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.white))
+                              strokeWidth: 2, color: c.onPrimary))
                       : Text(l.updatePassword,
                           style: const TextStyle(
                               fontWeight: FontWeight.bold, fontSize: 14)),

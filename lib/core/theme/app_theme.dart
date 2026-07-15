@@ -159,4 +159,220 @@ abstract class AppTheme {
       ),
     );
   }
+
+  // Dark theme. Mirrors `light` but sourced from AppPalette.dark. Screens that
+  // still reference the legacy `AppColors` const stay light until migrated to
+  // `context.colors`; this ThemeData drives Material defaults + migrated screens.
+  static ThemeData get dark {
+    final p = AppPalette.dark;
+    final colorScheme = ColorScheme(
+      brightness: Brightness.dark,
+      primary: p.primary,
+      onPrimary: p.onPrimary,
+      secondary: p.primaryLight,
+      onSecondary: p.onPrimary,
+      error: p.danger,
+      onError: p.onDanger,
+      surface: p.surface,
+      onSurface: p.onSurface,
+    );
+
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.dark,
+      colorScheme: colorScheme,
+      scaffoldBackgroundColor: p.surface,
+      fontFamily: 'Inter',
+
+      appBarTheme: AppBarTheme(
+        backgroundColor: p.appBar,
+        foregroundColor: p.onSurface,
+        elevation: 0,
+        centerTitle: false,
+        titleTextStyle: TextStyle(
+          fontFamily: 'Inter',
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
+          color: p.onSurface,
+        ),
+      ),
+
+      cardTheme: CardThemeData(
+        color: p.card,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: p.border),
+        ),
+      ),
+
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: p.primary,
+          foregroundColor: p.onPrimary,
+          minimumSize: const Size(double.infinity, 52),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          textStyle: AppTextStyles.labelLarge,
+        ),
+      ),
+
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: p.inputFill,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: p.border),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: p.border),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: p.primary, width: 2),
+        ),
+        hintStyle: AppTextStyles.bodyMedium.copyWith(color: p.onSurfaceVariant),
+        labelStyle: AppTextStyles.bodyMedium.copyWith(color: p.onSurfaceVariant),
+      ),
+
+      dividerTheme: DividerThemeData(color: p.border, space: 1),
+
+      textTheme: TextTheme(
+        displayLarge: AppTextStyles.displayLarge.copyWith(color: p.onSurface),
+        displayMedium: AppTextStyles.displayMedium.copyWith(color: p.onSurface),
+        titleLarge: AppTextStyles.titleLarge.copyWith(color: p.onSurface),
+        titleMedium: AppTextStyles.titleMedium.copyWith(color: p.onSurface),
+        bodyLarge: AppTextStyles.bodyLarge.copyWith(color: p.onSurface),
+        bodyMedium: AppTextStyles.bodyMedium.copyWith(color: p.onSurface),
+        labelLarge: AppTextStyles.labelLarge.copyWith(color: p.onSurface),
+        labelSmall: AppTextStyles.labelSmall.copyWith(color: p.onSurfaceVariant),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AppPalette — semantic colour tokens resolved per active brightness.
+// Migrated widgets read these via `context.colors.<token>` (see extension
+// below) instead of the legacy `AppColors` const. `light` mirrors AppColors
+// exactly so light mode is unchanged; `dark` is the dark-mode counterpart.
+// ─────────────────────────────────────────────────────────────────────────────
+class AppPalette {
+  // Brand
+  final Color primary, primaryLight, primaryDark, onPrimary;
+  // Surfaces
+  final Color surface, surfaceVariant, onSurface, onSurfaceVariant;
+  // Text
+  final Color textPrimary, textSecondary, textBody, textHint;
+  // Lines / inputs
+  final Color border, inputFill;
+  // Semantic states
+  final Color success, onSuccess, warning, onWarning, danger, onDanger;
+  // Accent + status chips
+  final Color accentSlate;
+  final Color statusInBox, statusIssued, statusFull, statusActive, statusInactive;
+  // Elevated card / app-bar surfaces (were hardcoded Colors.white in widgets)
+  final Color card, appBar;
+
+  const AppPalette({
+    required this.primary,
+    required this.primaryLight,
+    required this.primaryDark,
+    required this.onPrimary,
+    required this.surface,
+    required this.surfaceVariant,
+    required this.onSurface,
+    required this.onSurfaceVariant,
+    required this.textPrimary,
+    required this.textSecondary,
+    required this.textBody,
+    required this.textHint,
+    required this.border,
+    required this.inputFill,
+    required this.success,
+    required this.onSuccess,
+    required this.warning,
+    required this.onWarning,
+    required this.danger,
+    required this.onDanger,
+    required this.accentSlate,
+    required this.statusInBox,
+    required this.statusIssued,
+    required this.statusFull,
+    required this.statusActive,
+    required this.statusInactive,
+    required this.card,
+    required this.appBar,
+  });
+
+  static const light = AppPalette(
+    primary: Color(0xFF174da7),
+    primaryLight: Color(0xFF3B82F6),
+    primaryDark: Color(0xFF0F3A7A),
+    onPrimary: Color(0xFFFFFFFF),
+    surface: Color(0xFFF8FAFC),
+    surfaceVariant: Color(0xFFEFF6FF),
+    onSurface: Color(0xFF0F172A),
+    onSurfaceVariant: Color(0xFF64748B),
+    textPrimary: Color(0xFF174da7),
+    textSecondary: Color(0xFF94A3B8),
+    textBody: Color(0xFF64748B),
+    textHint: Color(0xFFCBD5E1),
+    border: Color(0xFFE2E8F0),
+    inputFill: Color(0xFFF8FAFC),
+    success: Color(0xFF009E60),
+    onSuccess: Color(0xFFFFFFFF),
+    warning: Color(0xFFF4B400),
+    onWarning: Color(0xFFFFFFFF),
+    danger: Color(0xFFEF2B2D),
+    onDanger: Color(0xFFFFFFFF),
+    accentSlate: Color(0xFF5B6B9E),
+    statusInBox: Color(0xFF174da7),
+    statusIssued: Color(0xFF009E60),
+    statusFull: Color(0xFFEF2B2D),
+    statusActive: Color(0xFF009E60),
+    statusInactive: Color(0xFF94A3B8),
+    card: Color(0xFFFFFFFF),
+    appBar: Color(0xFFFFFFFF),
+  );
+
+  static const dark = AppPalette(
+    primary: Color(0xFF3B82F6),
+    primaryLight: Color(0xFF60A5FA),
+    primaryDark: Color(0xFF93B4F0),   // light blue — used as heading text on dark
+    onPrimary: Color(0xFFFFFFFF),
+    surface: Color(0xFF0F172A),        // slate-900
+    surfaceVariant: Color(0xFF1E293B), // slate-800
+    onSurface: Color(0xFFE2E8F0),
+    onSurfaceVariant: Color(0xFF94A3B8),
+    textPrimary: Color(0xFF93B4F0),
+    textSecondary: Color(0xFF94A3B8),
+    textBody: Color(0xFFAAB4C4),
+    textHint: Color(0xFF64748B),
+    border: Color(0xFF334155),         // slate-700
+    inputFill: Color(0xFF1E293B),
+    success: Color(0xFF12B981),
+    onSuccess: Color(0xFFFFFFFF),
+    warning: Color(0xFFF5C242),
+    onWarning: Color(0xFFFFFFFF),
+    danger: Color(0xFFF0555A),
+    onDanger: Color(0xFFFFFFFF),
+    accentSlate: Color(0xFF8B9DC9),
+    statusInBox: Color(0xFF3B82F6),
+    statusIssued: Color(0xFF12B981),
+    statusFull: Color(0xFFF0555A),
+    statusActive: Color(0xFF12B981),
+    statusInactive: Color(0xFF64748B),
+    card: Color(0xFF1E293B),
+    appBar: Color(0xFF0F172A),
+  );
+}
+
+/// Access the active [AppPalette] for the current theme brightness.
+/// Usage in migrated widgets: `context.colors.primary`, `context.colors.surface`…
+extension AppColorsX on BuildContext {
+  AppPalette get colors => Theme.of(this).brightness == Brightness.dark
+      ? AppPalette.dark
+      : AppPalette.light;
 }

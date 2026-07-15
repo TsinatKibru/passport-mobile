@@ -376,5 +376,10 @@
   "vaultPosition": "Position {position}",
   "@vaultPosition": { "placeholders": { "position": {} } },
   "vaultQrLabel": "QR: {qr}",
-  "@vaultQrLabel": { "placeholders": { "qr": {} } }
+  "@vaultQrLabel": { "placeholders": { "qr": {} } },
+
+  "appTheme": "Theme",
+  "selectTheme": "Select Theme",
+  "themeLight": "Light",
+  "themeDark": "Dark"
 }

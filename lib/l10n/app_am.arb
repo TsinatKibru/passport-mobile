@@ -314,5 +314,10 @@
   "vaultRowsCount": "{count} ረድፎች",
   "vaultSlotsCount": "{count} ቦታዎች",
   "vaultPosition": "ቦታ {position}",
-  "vaultQrLabel": "QR፦ {qr}"
+  "vaultQrLabel": "QR፦ {qr}",
+
+  "appTheme": "ገጽታ",
+  "selectTheme": "ገጽታ ይምረጡ",
+  "themeLight": "ብሩህ",
+  "themeDark": "ጨለማ"
 }
