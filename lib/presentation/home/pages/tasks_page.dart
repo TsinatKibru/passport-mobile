@@ -112,8 +112,9 @@ class _TasksPageState extends State<TasksPage> {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: c.surface,
       body: FingerprintBackground(
         child: SafeArea(
           bottom: false,
@@ -124,8 +125,8 @@ class _TasksPageState extends State<TasksPage> {
               _buildBreadcrumbs(),
               Expanded(
                 child: _isLoading
-                    ? const Center(child: CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary)))
+                    ? Center(child: CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(c.primary)))
                     : AnimatedSwitcher(
                         duration: const Duration(milliseconds: 300),
                         transitionBuilder: (child, anim) => FadeTransition(
@@ -149,6 +150,7 @@ class _TasksPageState extends State<TasksPage> {
 
   Widget _buildHeader() {
     final l = AppLocalizations.of(context);
+    final c = context.colors;
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
       child: Row(
@@ -159,16 +161,16 @@ class _TasksPageState extends State<TasksPage> {
             children: [
               Text(l.vaultTitle,
                   style: TextStyle(fontFamily: 'Inter', fontSize: 24,
-                      fontWeight: FontWeight.w800, color: AppColors.primaryDark)),
+                      fontWeight: FontWeight.w800, color: c.primaryDark)),
               const SizedBox(height: 4),
               Text(l.vaultSubtitle,
                   style: TextStyle(fontFamily: 'Inter', fontSize: 12,
-                      color: AppColors.textBody.withOpacity(0.7))),
+                      color: c.textBody.withOpacity(0.7))),
             ],
           ),
           if (_currentLevel != 'rooms')
             IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.primary),
+              icon: Icon(Icons.arrow_back_ios_new_rounded, color: c.primary),
               onPressed: _navigateBack,
             ),
         ],
@@ -177,45 +179,46 @@ class _TasksPageState extends State<TasksPage> {
   }
 
   Widget _buildBreadcrumbs() {
+    final c = context.colors;
     final crumbs = <Widget>[
       GestureDetector(
         onTap: _loadRooms,
         child: Text(AppLocalizations.of(context).vaultRooms,
-            style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 13)),
+            style: TextStyle(color: c.primary, fontWeight: FontWeight.bold, fontSize: 13)),
       ),
     ];
 
     if (_selectedRoom != null) {
-      crumbs.add(const Icon(Icons.chevron_right, size: 14, color: AppColors.textBody));
+      crumbs.add(Icon(Icons.chevron_right, size: 14, color: c.textBody));
       crumbs.add(GestureDetector(
         onTap: () => _loadShelves(_selectedRoom!),
         child: Text(_selectedRoom!.name,
             style: TextStyle(
-              color: _currentLevel == 'shelves' ? AppColors.textBody : AppColors.primary,
+              color: _currentLevel == 'shelves' ? c.textBody : c.primary,
               fontWeight: FontWeight.bold, fontSize: 13)),
       ));
     }
     if (_selectedShelf != null) {
-      crumbs.add(const Icon(Icons.chevron_right, size: 14, color: AppColors.textBody));
+      crumbs.add(Icon(Icons.chevron_right, size: 14, color: c.textBody));
       crumbs.add(GestureDetector(
         onTap: () => _loadRows(_selectedShelf!),
         child: Text(_selectedShelf!.name,
             style: TextStyle(
-              color: _currentLevel == 'rows' ? AppColors.textBody : AppColors.primary,
+              color: _currentLevel == 'rows' ? c.textBody : c.primary,
               fontWeight: FontWeight.bold, fontSize: 13)),
       ));
     }
     if (_selectedRow != null) {
-      crumbs.add(const Icon(Icons.chevron_right, size: 14, color: AppColors.textBody));
+      crumbs.add(Icon(Icons.chevron_right, size: 14, color: c.textBody));
       crumbs.add(Text(_selectedRow!.name,
-          style: const TextStyle(color: AppColors.textBody, fontWeight: FontWeight.bold, fontSize: 13)));
+          style: TextStyle(color: c.textBody, fontWeight: FontWeight.bold, fontSize: 13)));
     }
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.border)),
+      decoration: BoxDecoration(color: c.card, borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: c.border)),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Row(children: crumbs),
@@ -235,6 +238,7 @@ class _TasksPageState extends State<TasksPage> {
 
   Widget _buildRoomsGrid() {
     final l = AppLocalizations.of(context);
+    final c = context.colors;
     if (_rooms.isEmpty) return _emptyState(l.vaultNoRooms);
     return GridView.builder(
       key: const ValueKey('rooms'),
@@ -247,6 +251,8 @@ class _TasksPageState extends State<TasksPage> {
         return GestureDetector(
           onTap: () => _loadShelves(room),
           child: GlassCard(
+            backgroundColor: c.card,
+            borderColor: c.border,
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -255,15 +261,15 @@ class _TasksPageState extends State<TasksPage> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.1), shape: BoxShape.circle),
-                  child: const Icon(Icons.meeting_room_rounded, color: AppColors.primary, size: 24),
+                      color: c.primary.withOpacity(0.1), shape: BoxShape.circle),
+                  child: Icon(Icons.meeting_room_rounded, color: c.primary, size: 24),
                 ),
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(room.name, style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.primaryDark)),
+                  Text(room.name, style: TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 16, color: c.primaryDark)),
                   const SizedBox(height: 4),
                   Text(l.vaultShelvesCount(room.shelfCount ?? 0),
-                      style: TextStyle(fontSize: 12, color: AppColors.textBody.withOpacity(0.6))),
+                      style: TextStyle(fontSize: 12, color: c.textBody.withOpacity(0.6))),
                 ]),
               ],
             ),
@@ -275,6 +281,7 @@ class _TasksPageState extends State<TasksPage> {
 
   Widget _buildShelvesList() {
     final l = AppLocalizations.of(context);
+    final c = context.colors;
     if (_shelves.isEmpty) return _emptyState(l.vaultNoShelves);
     return ListView.builder(
       key: const ValueKey('shelves'),
@@ -287,17 +294,19 @@ class _TasksPageState extends State<TasksPage> {
           child: GestureDetector(
             onTap: () => _loadRows(shelf),
             child: GlassCard(
+              backgroundColor: c.card,
+              borderColor: c.border,
               padding: const EdgeInsets.all(16),
               child: Row(children: [
-                _iconBox(Icons.dns_rounded, AppColors.success),
+                _iconBox(Icons.dns_rounded, c.success),
                 const SizedBox(width: 16),
                 Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(shelf.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.primaryDark)),
-                  Text(l.vaultPosition(shelf.position), style: TextStyle(fontSize: 12, color: AppColors.textBody.withOpacity(0.5))),
+                  Text(shelf.name, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: c.primaryDark)),
+                  Text(l.vaultPosition(shelf.position), style: TextStyle(fontSize: 12, color: c.textBody.withOpacity(0.5))),
                 ])),
                 _badge(l.vaultRowsCount(shelf.rowCount ?? 0)),
                 const SizedBox(width: 8),
-                const Icon(Icons.chevron_right_rounded, color: AppColors.textBody, size: 20),
+                Icon(Icons.chevron_right_rounded, color: c.textBody, size: 20),
               ]),
             ),
           ),
@@ -308,6 +317,7 @@ class _TasksPageState extends State<TasksPage> {
 
   Widget _buildRowsList() {
     final l = AppLocalizations.of(context);
+    final c = context.colors;
     if (_rows.isEmpty) return _emptyState(l.vaultNoRows);
     return ListView.builder(
       key: const ValueKey('rows'),
@@ -320,17 +330,19 @@ class _TasksPageState extends State<TasksPage> {
           child: GestureDetector(
             onTap: () => _loadSlots(row),
             child: GlassCard(
+              backgroundColor: c.card,
+              borderColor: c.border,
               padding: const EdgeInsets.all(16),
               child: Row(children: [
-                _iconBox(Icons.view_headline_rounded, AppColors.primaryDark),
+                _iconBox(Icons.view_headline_rounded, c.primaryDark),
                 const SizedBox(width: 16),
                 Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(row.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.primaryDark)),
-                  Text(l.vaultPosition(row.position), style: TextStyle(fontSize: 12, color: AppColors.textBody.withOpacity(0.5))),
+                  Text(row.name, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: c.primaryDark)),
+                  Text(l.vaultPosition(row.position), style: TextStyle(fontSize: 12, color: c.textBody.withOpacity(0.5))),
                 ])),
                 _badge(l.vaultSlotsCount(row.slotCount ?? 0)),
                 const SizedBox(width: 8),
-                const Icon(Icons.chevron_right_rounded, color: AppColors.textBody, size: 20),
+                Icon(Icons.chevron_right_rounded, color: c.textBody, size: 20),
               ]),
             ),
           ),
@@ -341,6 +353,7 @@ class _TasksPageState extends State<TasksPage> {
 
   Widget _buildSlotsGrid() {
     final l = AppLocalizations.of(context);
+    final c = context.colors;
     if (_slots.isEmpty) return _emptyState(l.vaultNoSlots);
     return GridView.builder(
       key: const ValueKey('slots'),
@@ -355,52 +368,52 @@ class _TasksPageState extends State<TasksPage> {
           onTap: box != null ? () => _showBoxDetailsSheet(box.qrCode) : null,
           child: Container(
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: c.card,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: box != null ? AppColors.primary.withOpacity(0.2) : AppColors.border, width: 1.5),
+              border: Border.all(color: box != null ? c.primary.withOpacity(0.2) : c.border, width: 1.5),
               boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))],
             ),
             padding: const EdgeInsets.all(14),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                Text(slot.name, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: AppColors.textBody)),
+                Text(slot.name, style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: c.textBody)),
                 Icon(box != null ? Icons.inventory_2_rounded : Icons.crop_free_rounded,
-                    color: box != null ? AppColors.primary : AppColors.textBody.withOpacity(0.3), size: 16),
+                    color: box != null ? c.primary : c.textBody.withOpacity(0.3), size: 16),
               ]),
               const Spacer(),
               if (box != null) ...[
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: (box.status == 'FULL' ? Colors.red : AppColors.success).withOpacity(0.1),
+                    color: (box.status == 'FULL' ? c.danger : c.success).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(_boxStatusLabel(l, box.status),
-                      style: TextStyle(color: box.status == 'FULL' ? Colors.red : AppColors.success,
+                      style: TextStyle(color: box.status == 'FULL' ? c.danger : c.success,
                           fontWeight: FontWeight.bold, fontSize: 9)),
                 ),
                 const SizedBox(height: 8),
-                Text(box.label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.primaryDark)),
+                Text(box.label, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: c.primaryDark)),
                 const SizedBox(height: 8),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(4),
                   child: LinearProgressIndicator(
                     value: box.capacity > 0 ? box.occupiedCount / box.capacity : 0,
-                    backgroundColor: AppColors.border,
+                    backgroundColor: c.border,
                     valueColor: AlwaysStoppedAnimation<Color>(
-                        box.occupiedCount >= box.capacity ? Colors.red : AppColors.primary),
+                        box.occupiedCount >= box.capacity ? c.danger : c.primary),
                     minHeight: 5,
                   ),
                 ),
                 const SizedBox(height: 6),
                 Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                  Text(l.vaultOccupied, style: TextStyle(fontSize: 10, color: AppColors.textBody.withOpacity(0.5))),
+                  Text(l.vaultOccupied, style: TextStyle(fontSize: 10, color: c.textBody.withOpacity(0.5))),
                   Text('${box.occupiedCount}/${box.capacity}',
-                      style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.primaryDark)),
+                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: c.primaryDark)),
                 ]),
               ] else
                 Center(child: Text(l.vaultEmptySlot,
-                    style: const TextStyle(fontSize: 11, color: AppColors.textBody, fontWeight: FontWeight.bold, letterSpacing: 0.5))),
+                    style: TextStyle(fontSize: 11, color: c.textBody, fontWeight: FontWeight.bold, letterSpacing: 0.5))),
             ]),
           ),
         );
@@ -417,18 +430,20 @@ class _TasksPageState extends State<TasksPage> {
   }
 
   Widget _badge(String label) {
+    final c = context.colors;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
-      child: Text(label, style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 11)),
+      decoration: BoxDecoration(color: c.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+      child: Text(label, style: TextStyle(color: c.primary, fontWeight: FontWeight.bold, fontSize: 11)),
     );
   }
 
   Widget _emptyState(String msg) {
+    final c = context.colors;
     return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-      Icon(Icons.inventory_2_outlined, size: 64, color: AppColors.textBody.withOpacity(0.15)),
+      Icon(Icons.inventory_2_outlined, size: 64, color: c.textBody.withOpacity(0.15)),
       const SizedBox(height: 16),
-      Text(msg, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primaryDark)),
+      Text(msg, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: c.primaryDark)),
     ]));
   }
 
@@ -476,19 +491,20 @@ class _BoxDetailsSheetState extends State<_BoxDetailsSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Container(
       height: MediaQuery.of(context).size.height * 0.75,
-      decoration: const BoxDecoration(color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+      decoration: BoxDecoration(color: c.card,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28))),
       child: Column(children: [
         const SizedBox(height: 12),
         Container(width: 48, height: 5,
-            decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(10))),
+            decoration: BoxDecoration(color: c.border, borderRadius: BorderRadius.circular(10))),
         const SizedBox(height: 16),
         Expanded(child: _loading
             ? const Center(child: CircularProgressIndicator())
             : _error != null
-                ? Center(child: Text(_error!, style: const TextStyle(color: Colors.red)))
+                ? Center(child: Text(_error!, style: TextStyle(color: c.danger)))
                 : _buildContent()),
       ]),
     );
@@ -496,6 +512,7 @@ class _BoxDetailsSheetState extends State<_BoxDetailsSheet> {
 
   Widget _buildContent() {
     final l = AppLocalizations.of(context);
+    final c = context.colors;
     final box = _box!;
     final passports = box.passports ?? [];
     return Padding(
@@ -503,39 +520,39 @@ class _BoxDetailsSheetState extends State<_BoxDetailsSheet> {
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
           Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(box.label, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.primaryDark)),
-            Text(l.vaultQrLabel(box.qrCode), style: const TextStyle(fontSize: 12, color: AppColors.textBody)),
+            Text(box.label, style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: c.primaryDark)),
+            Text(l.vaultQrLabel(box.qrCode), style: TextStyle(fontSize: 12, color: c.textBody)),
           ]),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+            decoration: BoxDecoration(color: c.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
             child: Text('${box.occupiedCount}/${box.capacity}',
-                style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 13)),
+                style: TextStyle(color: c.primary, fontWeight: FontWeight.bold, fontSize: 13)),
           ),
         ]),
         const SizedBox(height: 16),
         Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.border)),
+          decoration: BoxDecoration(color: c.surface, borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: c.border)),
           child: Row(children: [
-            const Icon(Icons.location_on_rounded, color: AppColors.primary, size: 20),
+            Icon(Icons.location_on_rounded, color: c.primary, size: 20),
             const SizedBox(width: 12),
             Expanded(child: Text(box.location ?? l.returnUnassignedLocation,
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.primaryDark))),
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: c.primaryDark))),
           ]),
         ),
         const SizedBox(height: 24),
         Text(l.vaultContainedPassports,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primaryDark)),
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: c.primaryDark)),
         const SizedBox(height: 12),
         Expanded(
           child: passports.isEmpty
               ? Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  const Icon(Icons.assignment_turned_in_rounded, size: 48, color: Color(0x33000000)),
+                  Icon(Icons.assignment_turned_in_rounded, size: 48, color: c.textBody.withValues(alpha: 0.2)),
                   const SizedBox(height: 12),
-                  Text(l.vaultNoPassportsInside, style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textBody)),
+                  Text(l.vaultNoPassportsInside, style: TextStyle(fontWeight: FontWeight.bold, color: c.textBody)),
                 ]))
               : ListView.builder(
                   itemCount: passports.length,
@@ -544,24 +561,24 @@ class _BoxDetailsSheetState extends State<_BoxDetailsSheet> {
                     return Container(
                       margin: const EdgeInsets.only(bottom: 10),
                       padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: AppColors.border)),
+                      decoration: BoxDecoration(color: c.card, borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: c.border)),
                       child: Row(children: [
                         Container(padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.08), shape: BoxShape.circle),
-                            child: const Icon(Icons.badge_rounded, color: AppColors.primary, size: 20)),
+                            decoration: BoxDecoration(color: c.primary.withOpacity(0.08), shape: BoxShape.circle),
+                            child: Icon(Icons.badge_rounded, color: c.primary, size: 20)),
                         const SizedBox(width: 14),
                         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                           Text(p.holderName,
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.primaryDark)),
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: c.primaryDark)),
                           Text(l.issueIdLabel(p.holderIdNo),
-                              style: TextStyle(fontSize: 11, color: AppColors.textBody.withOpacity(0.6))),
+                              style: TextStyle(fontSize: 11, color: c.textBody.withOpacity(0.6))),
                         ])),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(color: AppColors.success.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                          decoration: BoxDecoration(color: c.success.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
                           child: Text(_passportStatusLabel(l, p.status),
-                              style: const TextStyle(color: AppColors.success, fontWeight: FontWeight.bold, fontSize: 10)),
+                              style: TextStyle(color: c.success, fontWeight: FontWeight.bold, fontSize: 10)),
                         ),
                       ]),
                     );
