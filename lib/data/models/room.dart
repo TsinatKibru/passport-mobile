@@ -85,7 +85,7 @@ class VaultRow {
 class VaultSlot {
   final String id;
   final String name;
-  final String qrCode;
+  final String? qrCode; // slots no longer carry QR codes
   final int position;
   final String rowId;
   final List<SlotBox>? boxes;
@@ -93,7 +93,7 @@ class VaultSlot {
   VaultSlot({
     required this.id,
     required this.name,
-    required this.qrCode,
+    this.qrCode,
     required this.position,
     required this.rowId,
     this.boxes,
@@ -103,7 +103,7 @@ class VaultSlot {
     return VaultSlot(
       id: json['id'] as String,
       name: json['name'] as String,
-      qrCode: json['qrCode'] as String,
+      qrCode: json['qrCode'] as String?,
       position: json['position'] as int,
       rowId: json['rowId'] as String,
       boxes: json['boxes'] != null

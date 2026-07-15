@@ -55,26 +55,4 @@ class LocationRepository extends BaseRepository {
       return [];
     }
   }
-
-  /// POST /location/validate-return — validate physical alignment of box + slot in return flow
-  Future<Map<String, dynamic>?> validateReturn({
-    required String selectedBoxId,
-    required String scannedBoxQr,
-    required String scannedSlotQr,
-  }) async {
-    try {
-      final res = await dio.post(
-        '/location/validate-return',
-        data: {
-          'selectedBoxId': selectedBoxId,
-          'scannedBoxQr': scannedBoxQr,
-          'scannedSlotQr': scannedSlotQr,
-        },
-      );
-      return res.data as Map<String, dynamic>;
-    } catch (e) {
-      print('Error validating return custody: $e');
-      return null;
-    }
-  }
 }

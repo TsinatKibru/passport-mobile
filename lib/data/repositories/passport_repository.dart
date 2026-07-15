@@ -42,16 +42,12 @@ class PassportRepository extends BaseRepository {
   Future<bool> assignToBox({
     required String passportId,
     required String boxId,
-    String? slotQrCode,
-    bool overrideLocation = false,
   }) async {
     try {
       await dio.post(
         '/passports/$passportId/assign',
         data: {
           'boxId': boxId,
-          if (slotQrCode != null) 'slotQrCode': slotQrCode,
-          'overrideLocation': overrideLocation,
         },
       );
       return true;
@@ -65,16 +61,12 @@ class PassportRepository extends BaseRepository {
   Future<bool> returnToBox({
     required String passportId,
     required String boxId,
-    String? slotQrCode,
-    bool overrideLocation = false,
   }) async {
     try {
       await dio.post(
         '/passports/$passportId/return',
         data: {
           'boxId': boxId,
-          if (slotQrCode != null) 'slotQrCode': slotQrCode,
-          'overrideLocation': overrideLocation,
         },
       );
       return true;
@@ -88,8 +80,6 @@ class PassportRepository extends BaseRepository {
   Future<bool> batchAssign({
     required List<String> passportIds,
     required String boxId,
-    String? slotQrCode,
-    bool overrideLocation = false,
     required String action, // 'PASSPORT_ASSIGNED' | 'PASSPORT_RETURNED'
   }) async {
     await dio.post(
@@ -97,8 +87,6 @@ class PassportRepository extends BaseRepository {
       data: {
         'passportIds': passportIds,
         'boxId': boxId,
-        if (slotQrCode != null) 'slotQrCode': slotQrCode,
-        'overrideLocation': overrideLocation,
         'action': action,
       },
     );
