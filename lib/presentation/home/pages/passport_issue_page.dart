@@ -530,7 +530,10 @@ class _PassportCard extends StatelessWidget {
               const SizedBox(height: 8),
               // ── Location breadcrumb ───────────────────────────────────
               if (passport.box != null)
-                _LocationBreadcrumb(box: passport.box!),
+                _LocationBreadcrumb(
+                  box: passport.box!,
+                  fullLocation: passport.location,
+                ),
               const SizedBox(height: 14),
               // ── Action button (only for IN_BOX passports) ─────────────
               if (isInBox)
@@ -651,13 +654,18 @@ class _QrRow extends StatelessWidget {
 
 class _LocationBreadcrumb extends StatelessWidget {
   final BoxSummary box;
-  const _LocationBreadcrumb({required this.box});
+  final String? fullLocation; // top-level passport.location from API
+
+  const _LocationBreadcrumb({
+    required this.box,
+    required this.fullLocation,
+  });
 
   @override
   Widget build(BuildContext context) {
-    // location = "Building A / Shelf 01 / Row B / Slot 3"
-    // box.label = "Box 001" — always available, shown as the storage unit
-    final locationStr = box.location;
+    // Prefer the full location path from the passport root field.
+    // Fall back to box.location if somehow missing.
+    final locationStr = fullLocation ?? box.location;
     final parts = locationStr?.split(' / ') ?? [];
 
     return Container(
@@ -883,7 +891,7 @@ class _PassportCompactRow extends StatelessWidget {
     final statusColor = isInBox ? AppColors.primary : AppColors.warning;
 
     // Build a short location string: last 2 parts of the path or box label
-    final locationParts = passport.box?.location?.split(' / ') ?? [];
+    final locationParts = (passport.location ?? passport.box?.location)?.split(' / ') ?? [];
     final shortLocation = locationParts.length >= 2
         ? '${locationParts[locationParts.length - 2]} › ${locationParts.last}'
         : passport.box?.label ?? '—';

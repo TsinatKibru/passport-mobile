@@ -7,6 +7,7 @@ class Passport {
   final DateTime? dateReturned;
   final DateTime? dateIssued;
   final BoxSummary? box;
+  final String? location; // full path: "Room / Shelf / Row / Slot" — from API root field
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -19,6 +20,7 @@ class Passport {
     this.dateReturned,
     this.dateIssued,
     this.box,
+    this.location,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -37,6 +39,8 @@ class Passport {
           ? DateTime.parse(json['dateIssued'] as String)
           : null,
       box: json['box'] != null ? BoxSummary.fromJson(json['box']) : null,
+      // API sets location at the passport root, not inside box
+      location: json['location'] as String?,
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: DateTime.parse(json['updatedAt'] as String),
     );
