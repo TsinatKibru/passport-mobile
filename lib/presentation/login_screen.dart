@@ -26,6 +26,31 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     super.dispose();
   }
 
+  // The ICS logo art is designed for light backgrounds (dark-blue wordmark
+  // + faint cityscape on a transparent bg). In dark mode we mirror the
+  // web-admin's logo treatment: soften (opacity) and lift the artwork with a
+  // brightness/contrast colour-matrix so the dark-blue reads and blends on the
+  // dark surface instead of sitting dark-on-dark. Values are gentle — tune to taste.
+  Widget _brandLogo(bool isDark) {
+    const asset = Image(
+      image: AssetImage('assets/images/ics-logo.png'),
+      fit: BoxFit.contain,
+    );
+    if (!isDark) return asset;
+    return Opacity(
+      opacity: 0.92,
+      child: ColorFiltered(
+        colorFilter: const ColorFilter.matrix(<double>[
+          1.2, 0, 0, 0, 22, // R = R*1.2 + 22
+          0, 1.2, 0, 0, 22, // G
+          0, 0, 1.2, 0, 22, // B
+          0, 0, 0, 1, 0, // A (unchanged — keeps transparency)
+        ]),
+        child: asset,
+      ),
+    );
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -56,6 +81,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 Widget build(BuildContext context) {
   final l = AppLocalizations.of(context);
   final c = context.colors;
+  final isDark = Theme.of(context).brightness == Brightness.dark;
   final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
   final screenHeight = MediaQuery.of(context).size.height;
 
@@ -74,10 +100,7 @@ Widget build(BuildContext context) {
                 padding: const EdgeInsets.only(top: 40),
                 child: SizedBox(
                   height: 250,
-                  child: Image.asset(
-                    'assets/images/ics-logo.png',
-                    fit: BoxFit.contain,
-                  ),
+                  child: _brandLogo(isDark),
                 ),
               ),
             ),
