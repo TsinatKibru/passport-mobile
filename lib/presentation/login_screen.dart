@@ -41,15 +41,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       fit: BoxFit.contain,
     );
     if (!isDark) return asset;
-    return ShaderMask(
-      // dstIn keeps the child only where the gradient is opaque → the bottom
-      // (transparent stop) fades away, dropping the cityscape.
+
+    // Top band (fingerprint + dark-blue wordmark): brightness-lift so it reads
+    // on dark, and fade OUT below ~0.66 so it doesn't overlap the city.
+    final top = ShaderMask(
       blendMode: BlendMode.dstIn,
       shaderCallback: (rect) => const LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: [Colors.white, Colors.white, Colors.transparent],
-        stops: [0.0, 0.66, 0.74],
+        stops: [0.0, 0.66, 0.73],
       ).createShader(rect),
       child: ColorFiltered(
         colorFilter: const ColorFilter.matrix(<double>[
@@ -60,6 +61,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         ]),
         child: asset,
       ),
+    );
+
+    // Bottom band (pale cityscape): keep its natural colour (no lift, or it
+    // turns white) but dim it so it reads as a subtle silhouette, not a block.
+    // Fade IN above ~0.66 so only the city shows from this layer.
+    final city = ShaderMask(
+      blendMode: BlendMode.dstIn,
+      shaderCallback: (rect) => const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [Colors.transparent, Colors.transparent, Colors.white],
+        stops: [0.0, 0.66, 0.73],
+      ).createShader(rect),
+      child: const Opacity(opacity: 0.45, child: asset),
+    );
+
+    return Stack(
+      fit: StackFit.passthrough,
+      children: [city, top],
     );
   }
 
