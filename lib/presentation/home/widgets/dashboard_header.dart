@@ -1,18 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/auth_provider.dart';
+import '../../../core/theme_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../l10n/app_localizations.dart';
 
 class DashboardHeader extends ConsumerWidget {
-  final int pendingTasksCount;
-  final VoidCallback? onNotificationTap;
   final VoidCallback? onProfileTap;
 
   const DashboardHeader({
     super.key,
-    required this.pendingTasksCount,
-    this.onNotificationTap,
     this.onProfileTap,
   });
 
@@ -34,6 +31,8 @@ class DashboardHeader extends ConsumerWidget {
     final weekday = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'][now.weekday - 1];
     final month = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][now.month - 1];
     final dateStr = '$weekday, ${now.day} $month';
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
       color: Colors.white,
@@ -73,27 +72,31 @@ class DashboardHeader extends ConsumerWidget {
           const SizedBox(width: 16),
           Row(
             children: [
+              // Theme toggle (replaces the notification bell — no push
+              // notifications in this build). Sun ⇄ moon by active brightness.
               GestureDetector(
-                onTap: onNotificationTap,
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    const Icon(Icons.notifications_outlined,
-                        color: AppColors.primaryDark, size: 24),
-                    if (pendingTasksCount > 0)
-                      Positioned(
-                        right: -1,
-                        top: -1,
-                        child: Container(
-                          width: 7,
-                          height: 7,
-                          decoration: const BoxDecoration(
-                            color: AppColors.danger,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                      ),
-                  ],
+                onTap: () => ref.read(themeProvider.notifier).setThemeMode(
+                    isDark ? ThemeMode.light : ThemeMode.dark),
+                child: Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.06),
+                    shape: BoxShape.circle,
+                  ),
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 250),
+                    transitionBuilder: (child, anim) => RotationTransition(
+                      turns: Tween<double>(begin: 0.7, end: 1.0).animate(anim),
+                      child: FadeTransition(opacity: anim, child: child),
+                    ),
+                    child: Icon(
+                      isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+                      key: ValueKey(isDark),
+                      color: AppColors.primaryDark,
+                      size: 20,
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(width: 18),

@@ -27,8 +27,6 @@ class DashboardPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final statsAsync = ref.watch(dashboardStatsProvider);
     final l = AppLocalizations.of(context);
-    final int pendingCount =
-        statsAsync.maybeWhen(data: (s) => s?.inBox ?? 0, orElse: () => 0);
 
     return Scaffold(
       backgroundColor: AppColors.surface,
@@ -51,8 +49,6 @@ class DashboardPage extends ConsumerWidget {
             slivers: [
               SliverToBoxAdapter(
                 child: DashboardHeader(
-                  pendingTasksCount: pendingCount,
-                  onNotificationTap: () => _showNotificationsSheet(context),
                   onProfileTap: () => onNavigateToTab?.call(4),
                 ),
               ),
@@ -110,55 +106,6 @@ class DashboardPage extends ConsumerWidget {
     );
   }
 
-  void _showNotificationsSheet(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.fromLTRB(22, 14, 22, 32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.border,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ),
-            ),
-            const SizedBox(height: 18),
-            Text(l.dashNotifications,
-                style: const TextStyle(
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.w700,
-                    fontSize: 17,
-                    color: AppColors.primaryDark)),
-            const SizedBox(height: 16),
-            _NotifRow(
-              icon: Icons.warning_amber_rounded,
-              color: AppColors.warning,
-              title: l.notifCapacityTitle,
-              body: l.notifCapacityBody,
-            ),
-            const Divider(height: 20),
-            _NotifRow(
-              icon: Icons.inbox_rounded,
-              color: AppColors.primary,
-              title: l.notifBatchTitle,
-              body: l.notifBatchBody,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -903,52 +850,3 @@ class _InfoCard extends StatelessWidget {
       );
 }
 
-class _NotifRow extends StatelessWidget {
-  final IconData icon;
-  final Color color;
-  final String title;
-  final String body;
-  const _NotifRow(
-      {required this.icon,
-      required this.color,
-      required this.title,
-      required this.body});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.09),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(icon, color: color, size: 18),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title,
-                  style: const TextStyle(
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
-                      color: AppColors.primaryDark)),
-              const SizedBox(height: 3),
-              Text(body,
-                  style: const TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 12,
-                      color: AppColors.textBody,
-                      height: 1.4)),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}

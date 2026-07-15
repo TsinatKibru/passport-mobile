@@ -44,7 +44,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(error),
-          backgroundColor: AppColors.danger,
+          backgroundColor: context.colors.danger,
           behavior: SnackBarBehavior.floating,
           margin: const EdgeInsets.all(16),
         ),
@@ -55,12 +55,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
  @override
 Widget build(BuildContext context) {
   final l = AppLocalizations.of(context);
+  final c = context.colors;
   final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
   final screenHeight = MediaQuery.of(context).size.height;
 
   return Scaffold(
     resizeToAvoidBottomInset: false,
-    backgroundColor: const Color(0xFFF5F7FA),
+    backgroundColor: c.surface,
     body: SafeArea(
       child: Stack(
         children: [
@@ -94,7 +95,7 @@ Widget build(BuildContext context) {
 
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: c.card,
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(24),
                   topRight: Radius.circular(24),
@@ -125,10 +126,10 @@ Widget build(BuildContext context) {
 
                       Text(
                         l.loginWelcome,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary,
+                          color: c.textPrimary,
                         ),
                       ),
 
@@ -136,9 +137,9 @@ Widget build(BuildContext context) {
 
                       Text(
                         l.loginSubtitle,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 14,
-                          color: AppColors.textSecondary,
+                          color: c.textSecondary,
                         ),
                       ),
 
@@ -148,38 +149,38 @@ Widget build(BuildContext context) {
                       TextFormField(
                         controller: _emailController,
                         keyboardType: TextInputType.emailAddress,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 14,
-                          color: AppColors.textBody,
+                          color: c.textBody,
                         ),
 
                         decoration: InputDecoration(
                           hintText: l.loginUsername,
-                          hintStyle: const TextStyle(
-                            color: AppColors.textHint,
+                          hintStyle: TextStyle(
+                            color: c.textHint,
                             fontSize: 14,
                           ),
                           filled: true,
-                          fillColor: AppColors.inputFill,
+                          fillColor: c.inputFill,
 
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(
-                              color: AppColors.border,
+                            borderSide: BorderSide(
+                              color: c.border,
                             ),
                           ),
 
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(
-                              color: AppColors.border,
+                            borderSide: BorderSide(
+                              color: c.border,
                             ),
                           ),
 
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(
-                              color: AppColors.primary,
+                            borderSide: BorderSide(
+                              color: c.primary,
                               width: 2,
                             ),
                           ),
@@ -207,21 +208,21 @@ Widget build(BuildContext context) {
                         controller: _passwordController,
                         obscureText: _obscurePassword,
 
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 14,
-                          color: AppColors.textBody,
+                          color: c.textBody,
                         ),
 
                         decoration: InputDecoration(
                           hintText: l.loginPassword,
 
-                          hintStyle: const TextStyle(
-                            color: AppColors.textHint,
+                          hintStyle: TextStyle(
+                            color: c.textHint,
                             fontSize: 14,
                           ),
 
                           filled: true,
-                          fillColor: AppColors.inputFill,
+                          fillColor: c.inputFill,
 
                           suffixIcon: IconButton(
                             icon: Icon(
@@ -229,7 +230,7 @@ Widget build(BuildContext context) {
                                   ? Icons.visibility_off_outlined
                                   : Icons.visibility_outlined,
 
-                              color: AppColors.textSecondary,
+                              color: c.textSecondary,
                               size: 20,
                             ),
 
@@ -245,24 +246,24 @@ Widget build(BuildContext context) {
                           border: OutlineInputBorder(
                             borderRadius:
                                 BorderRadius.circular(12),
-                            borderSide: const BorderSide(
-                              color: AppColors.border,
+                            borderSide: BorderSide(
+                              color: c.border,
                             ),
                           ),
 
                           enabledBorder: OutlineInputBorder(
                             borderRadius:
                                 BorderRadius.circular(12),
-                            borderSide: const BorderSide(
-                              color: AppColors.border,
+                            borderSide: BorderSide(
+                              color: c.border,
                             ),
                           ),
 
                           focusedBorder: OutlineInputBorder(
                             borderRadius:
                                 BorderRadius.circular(12),
-                            borderSide: const BorderSide(
-                              color: AppColors.primary,
+                            borderSide: BorderSide(
+                              color: c.primary,
                               width: 2,
                             ),
                           ),
@@ -315,7 +316,7 @@ Widget build(BuildContext context) {
                                   },
 
                                   activeColor:
-                                      AppColors.primary,
+                                      c.primary,
 
                                   shape:
                                       RoundedRectangleBorder(
@@ -329,9 +330,9 @@ Widget build(BuildContext context) {
 
                               Text(
                                 l.loginRememberMe,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 13,
-                                  color: AppColors.primary,
+                                  color: c.primary,
                                   fontWeight:
                                       FontWeight.w500,
                                 ),
@@ -356,9 +357,9 @@ Widget build(BuildContext context) {
 
                             child: Text(
                               l.loginForgotPassword,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 13,
-                                color: AppColors.primary,
+                                color: c.primary,
                                 fontWeight:
                                     FontWeight.w500,
                               ),
@@ -383,10 +384,10 @@ Widget build(BuildContext context) {
                           style:
                               ElevatedButton.styleFrom(
                             backgroundColor:
-                                AppColors.primary,
+                                c.primary,
 
                             foregroundColor:
-                                Colors.white,
+                                c.onPrimary,
 
                             shape:
                                 RoundedRectangleBorder(
@@ -400,7 +401,7 @@ Widget build(BuildContext context) {
 
                           child: _loading
 
-                              ? const SizedBox(
+                              ? SizedBox(
                                   height: 20,
                                   width: 20,
 
@@ -411,7 +412,7 @@ Widget build(BuildContext context) {
                                     valueColor:
                                         AlwaysStoppedAnimation<
                                             Color>(
-                                      Colors.white,
+                                      c.onPrimary,
                                     ),
                                   ),
                                 )
