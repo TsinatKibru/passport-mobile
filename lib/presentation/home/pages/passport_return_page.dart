@@ -10,6 +10,7 @@ import '../../../data/repositories/location_repository.dart';
 import '../../../data/models/passport.dart';
 import '../../../data/models/box.dart' as models;
 import '../../../data/models/room.dart';
+import '../../../l10n/app_localizations.dart';
 import '../widgets/fingerprint_background.dart';
 
 /// CENTRAL CONSTANTS - Single source of truth for all magic numbers
@@ -21,7 +22,6 @@ class _Constants {
   static const int boxPaginationLimit = 15;
   static const double scanReticleWidth = 220;
   static const double scanReticleHeight = 140;
-  static const List<String> stepLabels = ['Scan', 'Select Box', 'Scan Box'];
 }
 
 class PassportReturnPage extends StatefulWidget {
@@ -138,6 +138,20 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
     }
   }
 
+  // Map a raw backend passport status onto its localised label.
+  String _returnStatusLabel(AppLocalizations l, String status) {
+    switch (status.toUpperCase()) {
+      case 'ISSUED':
+        return l.psIssued;
+      case 'IN_BOX':
+        return l.psInBox;
+      case 'RETURNED':
+        return l.psReturned;
+      default:
+        return status;
+    }
+  }
+
   Future<void> _loadRooms() async {
     if (!mounted) return;
     setState(() => _isLoadingRooms = true);
@@ -152,7 +166,7 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoadingRooms = false);
-        _showFeedback('Failed to load rooms', true);
+        _showFeedback(AppLocalizations.of(context).returnFailedLoadRooms, true);
       }
     }
   }
@@ -183,18 +197,20 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
 
     _detectedBarcodes.add(code);
 
+    final l = AppLocalizations.of(context);
     try {
       final passport = await _passportRepo.getByQr(code);
       if (passport == null) {
         _failedQrs.add(code);
-        _showFeedback('Passport not found: $code', true);
+        _showFeedback(l.scanPassportNotFound(code), true);
         return;
       }
 
       if (!passport.isIssued) {
         _failedQrs.add(code);
         _showFeedback(
-          '${passport.holderName} is currently ${passport.status} — only ISSUED passports can be returned',
+          l.returnOnlyIssued(
+              passport.holderName, _returnStatusLabel(l, passport.status)),
           true,
         );
         return;
@@ -202,10 +218,10 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
 
       if (!mounted) return;
       setState(() => _scannedPassports.add(passport));
-      _showFeedback('Added: ${passport.holderName}', false);
+      _showFeedback(l.returnAdded(passport.holderName), false);
     } catch (e) {
       _failedQrs.add(code);
-      _showFeedback('Error looking up passport: $e', true);
+      _showFeedback(l.returnErrLookupPassport('$e'), true);
     } finally {
       Future.delayed(const Duration(milliseconds: _Constants.processingQrExpiryMs), () {
         if (mounted) {
@@ -268,7 +284,7 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoadingBoxes = false);
-        _showFeedback('Failed to load available boxes', true);
+        _showFeedback(AppLocalizations.of(context).returnFailedLoadBoxes, true);
       }
     }
   }
@@ -323,13 +339,14 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
     if (_selectedBox == null) return;
     if (_isSubmitting) return;
 
+    final l = AppLocalizations.of(context);
     if (scannedQr == _selectedBox!.qrCode) {
       if (!mounted) return;
       setState(() {
         _scannedBoxQr = scannedQr;
         _clearMismatch();
       });
-      _showFeedback('Box QR verified', false);
+      _showFeedback(l.returnBoxQrVerified, false);
     } else {
       setState(() => _isSubmitting = true);
       try {
@@ -337,19 +354,20 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
         setState(() => _isSubmitting = false);
 
         if (scannedBox == null) {
-          _raiseMismatch('Wrong box QR scanned. Expected ${_selectedBox!.label}, but scanned QR code is unrecognized in the system.');
+          _raiseMismatch(l.returnWrongBoxQr(_selectedBox!.label));
           return;
         }
 
         _showMismatchOptionsDialog(scannedBox);
       } catch (e) {
         setState(() => _isSubmitting = false);
-        _raiseMismatch('Error looking up scanned box: $e');
+        _raiseMismatch(l.returnErrLookupBox('$e'));
       }
     }
   }
 
   void _showMismatchOptionsDialog(models.Box scannedBox) {
+    final l = AppLocalizations.of(context);
     final fits = (scannedBox.capacity - scannedBox.occupiedCount) >= _scannedPassports.length;
 
     showModalBottomSheet(
@@ -367,29 +385,34 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              children: const [
-                Icon(Icons.warning_amber_rounded, color: AppColors.warning, size: 28),
-                SizedBox(width: 12),
+              children: [
+                const Icon(Icons.warning_amber_rounded, color: AppColors.warning, size: 28),
+                const SizedBox(width: 12),
                 Text(
-                  'Physical Box Mismatch',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primaryDark),
+                  l.returnMismatchTitle,
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primaryDark),
                 ),
               ],
             ),
             const SizedBox(height: 16),
             Text(
-              'Expected Box: ${_selectedBox!.label}\nScanned Box: ${scannedBox.label} (${scannedBox.location ?? "Unassigned Location"})',
+              l.returnMismatchDetail(
+                _selectedBox!.label,
+                scannedBox.label,
+                scannedBox.location ?? l.returnUnassignedLocation,
+              ),
               style: const TextStyle(fontSize: 14, color: AppColors.primaryDark, height: 1.4),
             ),
             const SizedBox(height: 12),
             if (!fits)
-              const Text(
-                'Note: The physically scanned box does not have enough capacity for your stack.',
-                style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 13),
+              Text(
+                l.returnMismatchNoCapacity,
+                style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 13),
               )
             else
               Text(
-                'The physically scanned box has ${scannedBox.capacity - scannedBox.occupiedCount} vacant slots, which fits your ${_scannedPassports.length} passports.',
+                l.returnMismatchFits(
+                    scannedBox.capacity - scannedBox.occupiedCount, _scannedPassports.length),
                 style: const TextStyle(color: AppColors.textBody, fontSize: 13),
               ),
             const SizedBox(height: 24),
@@ -401,7 +424,7 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
                       Navigator.pop(ctx);
                       _goToStep(2);
                     },
-                    child: const Text('Find Correct Box'),
+                    child: Text(l.returnFindCorrectBox),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -419,9 +442,9 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
                           _scannedBoxQr = scannedBox.qrCode;
                           _clearMismatch();
                         });
-                        _showFeedback('Switched to physically scanned box: ${scannedBox.label}', false);
+                        _showFeedback(l.returnSwitchedBox(scannedBox.label), false);
                       },
-                      child: Text('Use ${scannedBox.label}'),
+                      child: Text(l.returnUseBox(scannedBox.label)),
                     ),
                   ),
               ],
@@ -431,7 +454,7 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
               width: double.infinity,
               child: TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: const Text('Cancel & Rescan'),
+                child: Text(l.returnCancelRescan),
               ),
             ),
           ],
@@ -465,17 +488,19 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
       _handleReturnError(dioErr);
     } catch (e) {
       setState(() => _isSubmitting = false);
-      _showFeedback('Return failed: $e', true);
+      _showFeedback(AppLocalizations.of(context).returnFailed('$e'), true);
     }
   }
 
   void _handleReturnError(DioException dioErr) {
     final responseData = dioErr.response?.data;
-    final message = (responseData is Map ? responseData['message'] : null) ?? 'Network error';
+    final message = (responseData is Map ? responseData['message'] : null) ??
+        AppLocalizations.of(context).returnNetworkError;
     _showFeedback(message, true);
   }
 
   void _showSuccessDialog() {
+    final l = AppLocalizations.of(context);
     final count = _scannedPassports.length;
 
     showModalBottomSheet(
@@ -503,7 +528,7 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
                   const Icon(Icons.inventory_2_rounded, color: Colors.white, size: 32),
                   const SizedBox(height: 10),
                   Text(
-                    '$count Passport${count == 1 ? '' : 's'} Returned',
+                    l.returnPassportsReturned(count),
                     style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
@@ -512,7 +537,7 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Stored in ${_selectedBox!.label}',
+                    l.returnStoredIn(_selectedBox!.label),
                     style: const TextStyle(color: Colors.white70, fontSize: 13),
                   ),
                 ],
@@ -547,7 +572,7 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
                         Navigator.pop(ctx);
                         context.pop();
                       },
-                      child: const Text('Back to Dashboard'),
+                      child: Text(l.returnBackToDashboard),
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -556,7 +581,7 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
                       Navigator.pop(ctx);
                       _resetForNewBatch();
                     },
-                    child: const Text('Return Another Batch'),
+                    child: Text(l.returnAnotherBatch),
                   ),
                 ],
               ),
@@ -611,10 +636,10 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    const Expanded(
+                    Expanded(
                       child: Text(
-                        'Return Custody Flow',
-                        style: TextStyle(
+                        AppLocalizations.of(context).returnFlowTitle,
+                        style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                           color: AppColors.primaryDark,
@@ -634,10 +659,12 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
   }
 
   Widget _buildStepIndicator() {
+    final l = AppLocalizations.of(context);
+    final stepLabels = [l.returnStepScan, l.returnStepSelectBox, l.returnStepScanBox];
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 4, 24, 18),
       child: Row(
-        children: List.generate(_Constants.stepLabels.length, (idx) {
+        children: List.generate(stepLabels.length, (idx) {
           final stepNum = idx + 1;
           final isDone = stepNum < _currentStep;
           final isCurrent = stepNum == _currentStep;
@@ -675,7 +702,7 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      _Constants.stepLabels[idx],
+                      stepLabels[idx],
                       style: TextStyle(
                         fontSize: 10.5,
                         fontWeight: isCurrent ? FontWeight.bold : FontWeight.w500,
@@ -684,7 +711,7 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
                     ),
                   ],
                 ),
-                if (idx < _Constants.stepLabels.length - 1)
+                if (idx < stepLabels.length - 1)
                   Expanded(
                     child: Padding(
                       padding: const EdgeInsets.only(bottom: 18),
@@ -718,6 +745,7 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
   }
 
   Widget _buildStep1() {
+    final l = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
       child: Column(
@@ -740,14 +768,14 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
                   Positioned(
                     top: 12,
                     left: 12,
-                    child: _CountBadge(count: _scannedPassports.length, label: 'scanned'),
+                    child: _CountBadge(count: _scannedPassports.length, label: l.returnScannedLabel),
                   ),
-                  const Positioned(
+                  Positioned(
                     bottom: 16,
                     left: 0,
                     right: 0,
                     child: Center(
-                      child: _ScanHint(text: 'Point camera at a passport QR code'),
+                      child: _ScanHint(text: l.returnScanPassportHint),
                     ),
                   ),
                 ],
@@ -763,7 +791,7 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
                 Row(
                   children: [
                     Text(
-                      'Scanned Stack (${_scannedPassports.length})',
+                      l.returnScannedStack(_scannedPassports.length),
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
@@ -774,15 +802,15 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
                     if (_scannedPassports.isNotEmpty)
                       TextButton(
                         onPressed: _clearScannedPassports,
-                        child: const Text('Clear All', style: TextStyle(color: AppColors.danger)),
+                        child: Text(l.returnClearAll, style: const TextStyle(color: AppColors.danger)),
                       ),
                   ],
                 ),
                 Expanded(
                   child: _scannedPassports.isEmpty
-                      ? const _EmptyState(
+                      ? _EmptyState(
                           icon: Icons.qr_code_2_rounded,
-                          message: 'No passports scanned yet',
+                          message: l.returnNoPassportsYet,
                         )
                       : ListView.separated(
                           itemCount: _scannedPassports.length,
@@ -801,7 +829,7 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
                                   passport.holderName,
                                   style: const TextStyle(fontWeight: FontWeight.bold),
                                 ),
-                                subtitle: Text('${passport.qrCode} • ID: ${passport.holderIdNo}'),
+                                subtitle: Text(l.returnPassportSubtitle(passport.qrCode, passport.holderIdNo)),
                                 trailing: IconButton(
                                   icon: const Icon(Icons.remove_circle_outline,
                                       color: AppColors.danger),
@@ -819,7 +847,7 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
                     style: _buttonStyle,
                     onPressed: _scannedPassports.isEmpty ? null : () => _loadAvailableBoxes(resetPage: true),
                     icon: const Icon(Icons.inventory_2_outlined),
-                    label: const Text('Find Storage Box'),
+                    label: Text(l.returnFindStorageBox),
                   ),
                 ),
               ],
@@ -831,17 +859,18 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
   }
 
   Widget _buildStep2() {
+    final l = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Select Target Storage Box',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.primaryDark),
+          Text(
+            l.returnSelectTargetBox,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.primaryDark),
           ),
           Text(
-            'Showing boxes with at least ${_scannedPassports.length} available slots',
+            l.returnShowingBoxes(_scannedPassports.length),
             style: const TextStyle(color: AppColors.textBody, fontSize: 12),
           ),
           const SizedBox(height: 16),
@@ -851,7 +880,7 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
           const SizedBox(height: 8),
           if (_totalBoxes > 0)
             Text(
-              'Found $_totalBoxes boxes • Page $_currentPage of $_totalPages',
+              l.returnFoundBoxes(_totalBoxes, _currentPage, _totalPages),
               style: const TextStyle(fontSize: 11, color: AppColors.textBody),
             ),
           const SizedBox(height: 16),
@@ -864,6 +893,7 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
   }
 
   Widget _buildRoomFilter() {
+    final l = AppLocalizations.of(context);
     if (_isLoadingRooms) {
       return const LinearProgressIndicator(minHeight: 2);
     }
@@ -880,9 +910,9 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
         child: DropdownButton<String?>(
           isExpanded: true,
           value: _selectedRoomId,
-          hint: const Text('All rooms', style: TextStyle(fontSize: 14)),
+          hint: Text(l.returnAllRooms, style: const TextStyle(fontSize: 14)),
           items: [
-            const DropdownMenuItem<String?>(value: null, child: Text('All rooms')),
+            DropdownMenuItem<String?>(value: null, child: Text(l.returnAllRooms)),
             ..._rooms.map((room) => DropdownMenuItem<String?>(value: room.id, child: Text(room.name))),
           ],
           onChanged: _onRoomChanged,
@@ -909,7 +939,7 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
         controller: _boxSearchController,
         onChanged: _onSearchChanged,
         decoration: InputDecoration(
-          hintText: 'Search by box label or QR code...',
+          hintText: AppLocalizations.of(context).returnSearchHint,
           prefixIcon: const Icon(Icons.search_rounded),
           suffixIcon: _searchQuery.isNotEmpty
               ? IconButton(
@@ -931,14 +961,15 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
   }
 
   Widget _buildBoxList() {
+    final l = AppLocalizations.of(context);
     if (_isLoadingBoxes && _availableBoxes.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
 
     if (_availableBoxes.isEmpty) {
-      return const _EmptyState(
+      return _EmptyState(
         icon: Icons.search_off,
-        message: 'No suitable boxes found.\nTry changing your filters.',
+        message: l.returnNoSuitableBoxes,
       );
     }
 
@@ -959,7 +990,7 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
                       : OutlinedButton.icon(
                           onPressed: _loadNextPage,
                           icon: const Icon(Icons.expand_more),
-                          label: Text('Load More (${_totalBoxes - _availableBoxes.length} remaining)'),
+                          label: Text(l.returnLoadMoreRemaining(_totalBoxes - _availableBoxes.length)),
                         ),
                 );
               }
@@ -978,6 +1009,7 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
   }
 
   Widget _buildBoxCard(models.Box box, int vacantSlots, bool fits) {
+    final l = AppLocalizations.of(context);
     final spaceColor = fits ? AppColors.success : AppColors.danger;
 
     return _FlatCard(
@@ -1022,7 +1054,7 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
-                '$vacantSlots vacant',
+                l.returnVacant(vacantSlots),
                 style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: spaceColor),
               ),
             ),
@@ -1037,6 +1069,7 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
   }
 
   Widget _buildPaginationControls() {
+    final l = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.only(top: 8),
       child: Row(
@@ -1045,16 +1078,16 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
           TextButton.icon(
             onPressed: _currentPage > 1 && !_isLoadingBoxes ? _goToPreviousPage : null,
             icon: const Icon(Icons.chevron_left),
-            label: const Text('Previous'),
+            label: Text(l.returnPrevious),
           ),
           Text(
-            'Page $_currentPage of $_totalPages',
+            l.returnPageOf(_currentPage, _totalPages),
             style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
           ),
           TextButton.icon(
             onPressed: _currentPage < _totalPages && !_isLoadingBoxes ? _goToNextPage : null,
             icon: const Icon(Icons.chevron_right),
-            label: const Text('Next'),
+            label: Text(l.returnNext),
           ),
         ],
       ),
@@ -1062,6 +1095,7 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
   }
 
   Widget _buildStep3() {
+    final l = AppLocalizations.of(context);
     final boxVerified = _scannedBoxQr != null;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
@@ -1078,14 +1112,12 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
               const SizedBox(height: 16),
             ],
             Text(
-              boxVerified ? 'Confirm Return' : 'Verify Physical Box',
+              boxVerified ? l.returnConfirmReturn : l.returnVerifyPhysicalBox,
               style: const TextStyle(
                   fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.primaryDark),
             ),
             Text(
-              boxVerified
-                  ? 'Box verified. Review the details and complete the return.'
-                  : 'Scan the QR code on the physical box to verify box custody identity.',
+              boxVerified ? l.returnBoxVerifiedDesc : l.returnScanBoxDesc,
               style: const TextStyle(color: AppColors.textBody, fontSize: 12),
             ),
             const SizedBox(height: 16),
@@ -1107,12 +1139,12 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
                         },
                       ),
                       const _ScanReticle(),
-                      const Positioned(
+                      Positioned(
                         bottom: 16,
                         left: 0,
                         right: 0,
                         child: Center(
-                            child: _ScanHint(text: 'Point camera at Box QR code')),
+                            child: _ScanHint(text: l.returnScanBoxHint)),
                       ),
                     ],
                   ),
@@ -1133,7 +1165,7 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
                           });
                         },
                   icon: const Icon(Icons.qr_code_scanner_rounded, size: 18),
-                  label: const Text('Rescan Box'),
+                  label: Text(l.returnRescanBox),
                 ),
               ),
               const SizedBox(height: 20),
@@ -1144,7 +1176,7 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
                     : ElevatedButton(
                         style: _buttonStyle,
                         onPressed: _executeBatchReturn,
-                        child: const Text('Complete Return & Assign'),
+                        child: Text(l.returnCompleteAssign),
                       ),
               ),
             ],
@@ -1155,6 +1187,7 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
   }
 
   Widget _buildBoxInfoCard() {
+    final l = AppLocalizations.of(context);
     return _FlatCard(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -1178,11 +1211,11 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Target Box: ${_selectedBox!.label}',
+                        l.scanTargetBox(_selectedBox!.label),
                         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                       ),
                       Text(
-                        'Capacity: ${_selectedBox!.occupiedCount}/${_selectedBox!.capacity} occupied',
+                        l.returnCapacity(_selectedBox!.occupiedCount, _selectedBox!.capacity),
                         style: const TextStyle(fontSize: 12, color: AppColors.textBody),
                       ),
                     ],
@@ -1192,12 +1225,12 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
             ),
             const Divider(height: 24),
             Text(
-              'Expected QR Code: ${_selectedBox!.qrCode}',
+              l.returnExpectedQr(_selectedBox!.qrCode),
               style: const TextStyle(fontSize: 12, color: AppColors.textBody, fontFamily: 'monospace'),
             ),
             const SizedBox(height: 4),
             Text(
-              'Expected Location: ${_selectedBox!.location ?? "Unassigned"}',
+              l.returnExpectedLocation(_selectedBox!.location ?? l.returnUnassigned),
               style: const TextStyle(fontSize: 12, color: AppColors.textBody),
             ),
           ],
@@ -1207,6 +1240,7 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
   }
 
   Widget _buildVerifiedBoxCard() {
+    final l = AppLocalizations.of(context);
     return _FlatCard(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -1230,11 +1264,11 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Verified Box: ${_selectedBox!.label}',
+                        l.returnVerifiedBox(_selectedBox!.label),
                         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                       ),
                       Text(
-                        'Returning ${_scannedPassports.length} passports',
+                        l.returnReturningCount(_scannedPassports.length),
                         style: const TextStyle(fontSize: 12, color: AppColors.textBody),
                       ),
                     ],
@@ -1244,7 +1278,7 @@ class _PassportReturnPageState extends State<PassportReturnPage> {
             ),
             const Divider(height: 24),
             Text(
-              'Expected Location: ${_selectedBox!.location ?? "Unassigned"}',
+              l.returnExpectedLocation(_selectedBox!.location ?? l.returnUnassigned),
               style: const TextStyle(fontSize: 12, color: AppColors.textBody),
             ),
           ],
