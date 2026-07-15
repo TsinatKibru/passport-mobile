@@ -286,11 +286,20 @@ class _HeroCard extends StatelessWidget {
           const SizedBox(height: 10),
           Row(
             children: [
-              _HeroStat(value: '${stats.inBox}', label: 'In vault'),
+              _HeroStat(
+                  icon: Icons.shield_rounded,
+                  value: '${stats.inBox}',
+                  label: 'In vault'),
               const _HeroDivider(),
-              _HeroStat(value: '${stats.issued}', label: 'Issued'),
+              _HeroStat(
+                  icon: Icons.import_contacts_rounded,
+                  value: '${stats.issued}',
+                  label: 'Issued'),
               const _HeroDivider(),
-              _HeroStat(value: '${stats.totalBoxes}', label: 'Boxes'),
+              _HeroStat(
+                  icon: Icons.inventory_2_rounded,
+                  value: '${stats.totalBoxes}',
+                  label: 'Boxes'),
             ],
           ),
         ],
@@ -303,34 +312,51 @@ class _HeroCard extends StatelessWidget {
 }
 
 class _HeroStat extends StatelessWidget {
+  final IconData icon;
   final String value;
   final String label;
-  const _HeroStat({required this.value, required this.label});
+  const _HeroStat({required this.icon, required this.value, required this.label});
 
   @override
   Widget build(BuildContext context) {
     return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Text(
-            value,
-            style: const TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
-              height: 1,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                    height: 1,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 11,
+                    color: Colors.white.withValues(alpha: 0.7),
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 3),
-          Text(
-            label,
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 11,
-              color: Colors.white.withValues(alpha: 0.7),
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(10),
             ),
+            child: Icon(icon, color: Colors.white, size: 16),
           ),
         ],
       ),
@@ -390,24 +416,27 @@ class _QuickActions extends StatelessWidget {
       children: [
         Expanded(
           child: _QuickAction(
-              icon: Icons.upload_rounded,
+              icon: Icons.import_contacts_rounded,
               label: 'Issue',
+              subtitle: 'New passport',
               color: AppColors.danger,
               onTap: onIssue),
         ),
         const SizedBox(width: 10),
         Expanded(
           child: _QuickAction(
-              icon: Icons.download_rounded,
+              icon: Icons.assignment_return_rounded,
               label: 'Return',
+              subtitle: 'Return passport',
               color: AppColors.warning,
               onTap: onReturn),
         ),
         const SizedBox(width: 10),
         Expanded(
           child: _QuickAction(
-              icon: Icons.archive_rounded,
+              icon: Icons.person_add_alt_1_rounded,
               label: 'Assign',
+              subtitle: 'Assign to user',
               color: AppColors.primary,
               onTap: onAssign),
         ),
@@ -416,6 +445,7 @@ class _QuickActions extends StatelessWidget {
           child: _QuickAction(
               icon: Icons.verified_user_rounded,
               label: 'Verify',
+              subtitle: 'Verify passport',
               color: AppColors.success,
               onTap: onVerify),
         ),
@@ -427,12 +457,14 @@ class _QuickActions extends StatelessWidget {
 class _QuickAction extends StatelessWidget {
   final IconData icon;
   final String label;
+  final String subtitle;
   final Color color;
   final VoidCallback onTap;
 
   const _QuickAction({
     required this.icon,
     required this.label,
+    required this.subtitle,
     required this.color,
     required this.onTap,
   });
@@ -446,7 +478,7 @@ class _QuickAction extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 14),
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: AppColors.border),
@@ -467,9 +499,30 @@ class _QuickAction extends StatelessWidget {
                 label,
                 style: const TextStyle(
                   fontFamily: 'Inter',
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
                   color: AppColors.primaryDark,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 9.5,
+                  color: AppColors.textBody.withValues(alpha: 0.7),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Container(
+                width: 20,
+                height: 2,
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
             ],
