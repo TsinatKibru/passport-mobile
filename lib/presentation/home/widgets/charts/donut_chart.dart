@@ -37,7 +37,10 @@ class DonutChart extends StatelessWidget {
         children: [
           CustomPaint(
             size: Size(size, size),
-            painter: _DonutPainter(segments: segments, thickness: thickness),
+            painter: _DonutPainter(
+                segments: segments,
+                thickness: thickness,
+                trackColor: context.colors.border),
           ),
           if (center != null) center!,
         ],
@@ -49,8 +52,12 @@ class DonutChart extends StatelessWidget {
 class _DonutPainter extends CustomPainter {
   final List<DonutSegment> segments;
   final double thickness;
+  final Color trackColor;
 
-  _DonutPainter({required this.segments, required this.thickness});
+  _DonutPainter(
+      {required this.segments,
+      required this.thickness,
+      required this.trackColor});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -65,7 +72,7 @@ class _DonutPainter extends CustomPainter {
     final track = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = thickness
-      ..color = AppColors.border;
+      ..color = trackColor;
     canvas.drawCircle(center, radius, track);
 
     if (total <= 0) return;
@@ -91,5 +98,7 @@ class _DonutPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _DonutPainter old) =>
-      old.segments != segments || old.thickness != thickness;
+      old.segments != segments ||
+      old.thickness != thickness ||
+      old.trackColor != trackColor;
 }

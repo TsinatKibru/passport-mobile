@@ -22,13 +22,14 @@ class ActivityTrendChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     if (points.isEmpty) {
       return SizedBox(
         height: height,
         child: Center(
           child: Text(
             AppLocalizations.of(context).chartNoActivity,
-            style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textBody),
+            style: AppTextStyles.bodyMedium.copyWith(color: c.textBody),
           ),
         ),
       );
@@ -41,7 +42,13 @@ class ActivityTrendChart extends StatelessWidget {
           Expanded(
             child: CustomPaint(
               size: Size.infinite,
-              painter: _TrendPainter(points),
+              painter: _TrendPainter(
+                points,
+                lineColor: c.primary,
+                gridColor: c.border,
+                labelColor: c.textBody,
+                dotInnerColor: c.card,
+              ),
             ),
           ),
           const SizedBox(height: 6),
@@ -56,7 +63,8 @@ class ActivityTrendChart extends StatelessWidget {
                     child: Text(
                       p.shortLabel,
                       textAlign: TextAlign.center,
-                      style: AppTextStyles.caption.copyWith(fontSize: 9),
+                      style: AppTextStyles.caption
+                          .copyWith(fontSize: 9, color: c.onSurfaceVariant),
                     ),
                   ),
               ],
@@ -70,7 +78,17 @@ class ActivityTrendChart extends StatelessWidget {
 
 class _TrendPainter extends CustomPainter {
   final List<ActivityTrendPoint> points;
-  _TrendPainter(this.points);
+  final Color lineColor;
+  final Color gridColor;
+  final Color labelColor;
+  final Color dotInnerColor;
+  _TrendPainter(
+    this.points, {
+    required this.lineColor,
+    required this.gridColor,
+    required this.labelColor,
+    required this.dotInnerColor,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -97,7 +115,7 @@ class _TrendPainter extends CustomPainter {
 
     // Horizontal gridlines + Y-axis value labels (top = maxV, mid, 0).
     final grid = Paint()
-      ..color = AppColors.border
+      ..color = gridColor
       ..strokeWidth = 1;
     for (int g = 0; g <= 2; g++) {
       final y = padTop + usableH * (g / 2);
@@ -132,8 +150,8 @@ class _TrendPainter extends CustomPainter {
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: [
-          AppColors.primary.withValues(alpha: 0.10),
-          AppColors.primary.withValues(alpha: 0.0),
+          lineColor.withValues(alpha: 0.10),
+          lineColor.withValues(alpha: 0.0),
         ],
       ).createShader(Rect.fromLTWH(leftPad, 0, plotW, size.height));
     canvas.drawPath(area, areaPaint);
@@ -144,12 +162,12 @@ class _TrendPainter extends CustomPainter {
       ..strokeWidth = 2.5
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round
-      ..color = AppColors.primary;
+      ..color = lineColor;
     canvas.drawPath(line, stroke);
 
     // Point markers
-    final dot = Paint()..color = AppColors.primary;
-    final dotInner = Paint()..color = Colors.white;
+    final dot = Paint()..color = lineColor;
+    final dotInner = Paint()..color = dotInnerColor;
     for (final p in pts) {
       canvas.drawCircle(p, 3.2, dot);
       canvas.drawCircle(p, 1.5, dotInner);
@@ -163,10 +181,10 @@ class _TrendPainter extends CustomPainter {
     final tp = TextPainter(
       text: TextSpan(
         text: text,
-        style: const TextStyle(
+        style: TextStyle(
           fontFamily: 'Inter',
           fontSize: 9,
-          color: AppColors.textBody,
+          color: labelColor,
         ),
       ),
       textDirection: TextDirection.ltr,
@@ -176,5 +194,10 @@ class _TrendPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _TrendPainter old) => old.points != points;
+  bool shouldRepaint(covariant _TrendPainter old) =>
+      old.points != points ||
+      old.lineColor != lineColor ||
+      old.gridColor != gridColor ||
+      old.labelColor != labelColor ||
+      old.dotInnerColor != dotInnerColor;
 }

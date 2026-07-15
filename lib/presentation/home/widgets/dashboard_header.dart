@@ -33,9 +33,10 @@ class DashboardHeader extends ConsumerWidget {
     final dateStr = '$weekday, ${now.day} $month';
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final c = context.colors;
 
     return Container(
-      color: Colors.white,
+      color: c.appBar,
       padding: EdgeInsets.fromLTRB(22, MediaQuery.of(context).padding.top + 14, 22, 18),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -46,22 +47,22 @@ class DashboardHeader extends ConsumerWidget {
               children: [
                 Text(
                   dateStr,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
-                    color: AppColors.textBody,
+                    color: c.textBody,
                     letterSpacing: 0.1,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   '$greeting, $firstName',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 22,
                     fontWeight: FontWeight.w700,
-                    color: AppColors.primaryDark,
+                    color: c.primaryDark,
                     letterSpacing: -0.5,
                     height: 1.2,
                   ),
@@ -81,7 +82,7 @@ class DashboardHeader extends ConsumerWidget {
                   width: 38,
                   height: 38,
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.06),
+                    color: c.primary.withValues(alpha: 0.06),
                     shape: BoxShape.circle,
                   ),
                   child: AnimatedSwitcher(
@@ -93,7 +94,7 @@ class DashboardHeader extends ConsumerWidget {
                     child: Icon(
                       isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
                       key: ValueKey(isDark),
-                      color: AppColors.primaryDark,
+                      color: c.primaryDark,
                       size: 20,
                     ),
                   ),
@@ -104,11 +105,11 @@ class DashboardHeader extends ConsumerWidget {
                 onTap: onProfileTap,
                 child: CircleAvatar(
                   radius: 18,
-                  backgroundColor: AppColors.primary,
+                  backgroundColor: c.primary,
                   child: Text(
                     firstName.isNotEmpty ? firstName[0].toUpperCase() : 'O',
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: c.onPrimary,
                       fontWeight: FontWeight.w700,
                       fontSize: 14,
                     ),

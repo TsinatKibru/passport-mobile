@@ -18,7 +18,8 @@ class ActivityCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final style = _styleFor(actionType.toUpperCase());
+    final c = context.colors;
+    final style = _styleFor(c, actionType.toUpperCase());
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10),
@@ -44,11 +45,11 @@ class ActivityCard extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.primaryDark,
+                    color: c.primaryDark,
                     height: 1.2,
                   ),
                 ),
@@ -58,10 +59,10 @@ class ActivityCard extends StatelessWidget {
                     subtitle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: 'Inter',
                       fontSize: 11,
-                      color: AppColors.textBody,
+                      color: c.textBody,
                     ),
                   ),
                 ],
@@ -75,7 +76,7 @@ class ActivityCard extends StatelessWidget {
             style: TextStyle(
               fontFamily: 'Inter',
               fontSize: 11,
-              color: AppColors.textBody.withValues(alpha: 0.55),
+              color: c.textBody.withValues(alpha: 0.55),
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -84,16 +85,16 @@ class ActivityCard extends StatelessWidget {
     );
   }
 
-  _Style _styleFor(String action) {
+  _Style _styleFor(AppPalette c, String action) {
     switch (action) {
       case 'PASSPORT_ISSUED':
-        return _Style(Icons.upload_rounded, AppColors.success);
+        return _Style(Icons.upload_rounded, c.success);
       case 'PASSPORT_RETURNED':
-        return _Style(Icons.download_rounded, AppColors.warning);
+        return _Style(Icons.download_rounded, c.warning);
       case 'BOX_MOVED':
-        return _Style(Icons.swap_horiz_rounded, const Color(0xFF5B6B9E));
+        return _Style(Icons.swap_horiz_rounded, c.accentSlate);
       default:
-        return _Style(Icons.archive_rounded, AppColors.primary);
+        return _Style(Icons.archive_rounded, c.primary);
     }
   }
 }

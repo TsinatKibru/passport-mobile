@@ -27,12 +27,13 @@ class DashboardPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final statsAsync = ref.watch(dashboardStatsProvider);
     final l = AppLocalizations.of(context);
+    final c = context.colors;
 
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: c.surface,
       body: FingerprintBackground(
         child: RefreshIndicator(
-          color: AppColors.primary,
+          color: c.primary,
           onRefresh: () async {
             ref.invalidate(dashboardStatsProvider);
             ref.invalidate(activityLogsProvider);
@@ -328,19 +329,21 @@ class _HeroDivider extends StatelessWidget {
 class _HeroSkeleton extends StatelessWidget {
   const _HeroSkeleton();
   @override
-  Widget build(BuildContext context) => Container(
-        height: 200,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: AppColors.border),
-        ),
-        child: const Center(
-          child: CircularProgressIndicator(
-              strokeWidth: 2,
-              valueColor: AlwaysStoppedAnimation(AppColors.primary)),
-        ),
-      );
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return Container(
+      height: 200,
+      decoration: BoxDecoration(
+        color: c.card,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: c.border),
+      ),
+      child: Center(
+        child: CircularProgressIndicator(
+            strokeWidth: 2, valueColor: AlwaysStoppedAnimation(c.primary)),
+      ),
+    );
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -363,6 +366,7 @@ class _QuickActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    final c = context.colors;
     return Row(
       children: [
         Expanded(
@@ -370,7 +374,7 @@ class _QuickActions extends StatelessWidget {
               icon: Icons.import_contacts_rounded,
               label: l.qaIssue,
               subtitle: l.qaIssueSub,
-              color: AppColors.danger,
+              color: c.danger,
               onTap: onIssue),
         ),
         const SizedBox(width: 10),
@@ -379,7 +383,7 @@ class _QuickActions extends StatelessWidget {
               icon: Icons.assignment_return_rounded,
               label: l.qaReturn,
               subtitle: l.qaReturnSub,
-              color: AppColors.warning,
+              color: c.warning,
               onTap: onReturn),
         ),
         const SizedBox(width: 10),
@@ -388,7 +392,7 @@ class _QuickActions extends StatelessWidget {
               icon: Icons.person_add_alt_1_rounded,
               label: l.qaAssign,
               subtitle: l.qaAssignSub,
-              color: AppColors.primary,
+              color: c.primary,
               onTap: onAssign),
         ),
         const SizedBox(width: 10),
@@ -397,7 +401,7 @@ class _QuickActions extends StatelessWidget {
               icon: Icons.verified_user_rounded,
               label: l.qaVerify,
               subtitle: l.qaVerifySub,
-              color: AppColors.success,
+              color: c.success,
               onTap: onVerify),
         ),
       ],
@@ -422,8 +426,9 @@ class _QuickAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Material(
-      color: Colors.white,
+      color: c.card,
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         onTap: onTap,
@@ -432,7 +437,7 @@ class _QuickAction extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.border),
+            border: Border.all(color: c.border),
           ),
           child: Column(
             children: [
@@ -448,11 +453,11 @@ class _QuickAction extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 label,
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'Inter',
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.primaryDark,
+                  color: c.primaryDark,
                 ),
               ),
               const SizedBox(height: 2),
@@ -464,7 +469,7 @@ class _QuickAction extends StatelessWidget {
                 style: TextStyle(
                   fontFamily: 'Inter',
                   fontSize: 9.5,
-                  color: AppColors.textBody.withValues(alpha: 0.7),
+                  color: c.textBody.withValues(alpha: 0.7),
                 ),
               ),
               const SizedBox(height: 6),
@@ -497,11 +502,12 @@ class _SectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: c.card,
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
@@ -520,12 +526,12 @@ class _SectionCard extends StatelessWidget {
               Text(
                 title,
                 style: AppTextStyles.titleMedium
-                    .copyWith(color: AppColors.primaryDark, fontSize: 15),
+                    .copyWith(color: c.primaryDark, fontSize: 15),
               ),
               if (trailing != null)
                 Text(
                   trailing!,
-                  style: AppTextStyles.caption.copyWith(color: AppColors.textBody),
+                  style: AppTextStyles.caption.copyWith(color: c.textBody),
                 ),
             ],
           ),
@@ -547,6 +553,7 @@ class _TrendCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
+    final c = context.colors;
     final async = ref.watch(activityTrendProvider);
     return _SectionCard(
       title: l.dashActivity,
@@ -562,11 +569,11 @@ class _TrendCard extends ConsumerWidget {
                 children: [
                   Text(
                     '$total',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: 'Inter',
                       fontSize: 24,
                       fontWeight: FontWeight.w800,
-                      color: AppColors.primaryDark,
+                      color: c.primaryDark,
                       height: 1,
                     ),
                   ),
@@ -575,7 +582,7 @@ class _TrendCard extends ConsumerWidget {
                     padding: const EdgeInsets.only(bottom: 3),
                     child: Text(
                       l.dashMovements,
-                      style: AppTextStyles.caption.copyWith(color: AppColors.textBody),
+                      style: AppTextStyles.caption.copyWith(color: c.textBody),
                     ),
                   ),
                 ],
@@ -603,6 +610,7 @@ class _StatusCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    final c = context.colors;
     return _SectionCard(
       title: l.dashPassportStatus,
       trailing: '${stats.totalPassports} ${l.dashTotal}',
@@ -612,23 +620,25 @@ class _StatusCard extends StatelessWidget {
             size: 96,
             thickness: 12,
             segments: [
-              DonutSegment(stats.inBox.toDouble(), AppColors.primary),
-              DonutSegment(stats.issued.toDouble(), AppColors.success),
+              DonutSegment(stats.inBox.toDouble(), c.primary),
+              DonutSegment(stats.issued.toDouble(), c.success),
             ],
             center: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   '${stats.totalPassports}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 20,
                     fontWeight: FontWeight.w800,
-                    color: AppColors.primaryDark,
+                    color: c.primaryDark,
                     height: 1,
                   ),
                 ),
-                Text(l.dashTotal, style: AppTextStyles.caption.copyWith(fontSize: 9)),
+                Text(l.dashTotal,
+                    style: AppTextStyles.caption
+                        .copyWith(fontSize: 9, color: c.onSurfaceVariant)),
               ],
             ),
           ),
@@ -637,10 +647,10 @@ class _StatusCard extends StatelessWidget {
             child: Column(
               children: [
                 _LegendRow(
-                    color: AppColors.primary, label: l.dashInVault, value: stats.inBox),
+                    color: c.primary, label: l.dashInVault, value: stats.inBox),
                 const SizedBox(height: 12),
                 _LegendRow(
-                    color: AppColors.success, label: l.dashIssued, value: stats.issued),
+                    color: c.success, label: l.dashIssued, value: stats.issued),
               ],
             ),
           ),
@@ -659,6 +669,7 @@ class _LegendRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Row(
       children: [
         Container(
@@ -670,12 +681,12 @@ class _LegendRow extends StatelessWidget {
         const SizedBox(width: 10),
         Expanded(
           child: Text(label,
-              style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textBody)),
+              style: AppTextStyles.bodyMedium.copyWith(color: c.textBody)),
         ),
         Text(
           '$value',
           style: AppTextStyles.titleMedium
-              .copyWith(color: AppColors.primaryDark, fontSize: 15),
+              .copyWith(color: c.primaryDark, fontSize: 15),
         ),
       ],
     );
@@ -718,6 +729,7 @@ class _RecentActivity extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
+    final c = context.colors;
     final logsAsync = ref.watch(activityLogsProvider);
     return _SectionCard(
       title: l.dashRecentActivity,
@@ -728,7 +740,7 @@ class _RecentActivity extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(vertical: 12),
               child: Text(l.dashNoRecentActivity,
                   style:
-                      AppTextStyles.bodyMedium.copyWith(color: AppColors.textBody)),
+                      AppTextStyles.bodyMedium.copyWith(color: c.textBody)),
             );
           }
           return Column(
@@ -804,15 +816,15 @@ class _RecentActivity extends ConsumerWidget {
 class _CardLoader extends StatelessWidget {
   const _CardLoader();
   @override
-  Widget build(BuildContext context) => const Padding(
-        padding: EdgeInsets.symmetric(vertical: 22),
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 22),
         child: Center(
           child: SizedBox(
             width: 22,
             height: 22,
             child: CircularProgressIndicator(
                 strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation(AppColors.primary)),
+                valueColor: AlwaysStoppedAnimation(context.colors.primary)),
           ),
         ),
       );
@@ -826,7 +838,7 @@ class _CardError extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 16),
         child: Center(
           child: Text(text,
-              style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textBody)),
+              style: AppTextStyles.bodyMedium.copyWith(color: context.colors.textBody)),
         ),
       );
 }
@@ -839,13 +851,13 @@ class _InfoCard extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 28),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: context.colors.card,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: AppColors.border),
+          border: Border.all(color: context.colors.border),
         ),
         child: Center(
           child: Text(text,
-              style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textBody)),
+              style: AppTextStyles.bodyMedium.copyWith(color: context.colors.textBody)),
         ),
       );
 }

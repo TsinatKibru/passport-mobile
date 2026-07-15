@@ -16,6 +16,7 @@ class FloatingBottomNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    final c = context.colors;
     return SafeArea(
       child: Container(
         height: 72,
@@ -31,10 +32,10 @@ class FloatingBottomNav extends StatelessWidget {
                 child: Container(
                   height: 64,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.85),
+                    color: c.card.withOpacity(0.85),
                     borderRadius: BorderRadius.circular(28),
                     border: Border.all(
-                      color: Colors.white.withOpacity(0.5),
+                      color: c.border.withOpacity(0.6),
                       width: 1.5,
                     ),
                     boxShadow: [
@@ -48,12 +49,12 @@ class FloatingBottomNav extends StatelessWidget {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      _buildNavItem(0, Icons.grid_view_rounded, l.navHome),
-                      _buildNavItem(1, Icons.explore_outlined, l.navExplorer),
+                      _buildNavItem(c, 0, Icons.grid_view_rounded, l.navHome),
+                      _buildNavItem(c, 1, Icons.explore_outlined, l.navExplorer),
                       // Placeholder space for center button
                       const SizedBox(width: 56),
-                      _buildNavItem(3, Icons.inventory_2_outlined, l.dashBoxes),
-                      _buildNavItem(4, Icons.person_outline_rounded, l.navProfile),
+                      _buildNavItem(c, 3, Icons.inventory_2_outlined, l.dashBoxes),
+                      _buildNavItem(c, 4, Icons.person_outline_rounded, l.navProfile),
                     ],
                   ),
                 ),
@@ -86,13 +87,13 @@ class FloatingBottomNav extends StatelessWidget {
                       ),
                     ],
                     border: Border.all(
-                      color: Colors.white,
+                      color: c.card,
                       width: 3.0,
                     ),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.qr_code_scanner_rounded,
-                    color: Colors.white,
+                    color: c.onPrimary,
                     size: 26,
                   ),
                 ),
@@ -104,9 +105,9 @@ class FloatingBottomNav extends StatelessWidget {
     );
   }
 
-  Widget _buildNavItem(int index, IconData icon, String label) {
+  Widget _buildNavItem(AppPalette c, int index, IconData icon, String label) {
     final isSelected = selectedIndex == index;
-    final color = isSelected ? AppColors.primary : AppColors.textBody.withOpacity(0.6);
+    final color = isSelected ? c.primary : c.textBody.withOpacity(0.6);
     
     return Expanded(
       child: GestureDetector(
