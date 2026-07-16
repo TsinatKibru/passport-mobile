@@ -3,7 +3,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 const _baseUrl = String.fromEnvironment(
   'API_BASE_URL',
-  defaultValue: 'http://192.168.0.5:3000/api', // Android emulator → localhost
+  defaultValue: 'http://172.20.47.91:3000/api', // Android emulator → localhost
 );
 
 /// Single Dio instance for all API calls — CONVENTIONS.md §1.
