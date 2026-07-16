@@ -523,142 +523,144 @@ class _PassportReturnPageState extends ConsumerState<PassportReturnPage> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Success icon indicator
-            Container(
-              margin: const EdgeInsets.only(top: 28),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: c.success.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
+      builder: (ctx) => SingleChildScrollView(
+        child: Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Success icon indicator
+              Container(
+                margin: const EdgeInsets.only(top: 28),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: c.success.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.check_circle_rounded, color: c.success, size: 52),
               ),
-              child: Icon(Icons.check_circle_rounded, color: c.success, size: 52),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              l.returnPassportsReturned(count),
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-                color: c.primaryDark,
+              const SizedBox(height: 16),
+              Text(
+                l.returnPassportsReturned(count),
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: c.primaryDark,
+                ),
               ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              l.returnStoredIn(_selectedBox!.label),
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 13.5,
-                color: c.textBody,
+              const SizedBox(height: 6),
+              Text(
+                l.returnStoredIn(_selectedBox!.label),
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 13.5,
+                  color: c.textBody,
+                ),
               ),
-            ),
-            const SizedBox(height: 20),
+              const SizedBox(height: 20),
 
-            // Batch summary card
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 24),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: c.surface,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: c.border),
+              // Batch summary card
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 24),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: c.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: c.border),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.inventory_2_outlined, size: 14, color: c.primary),
+                        const SizedBox(width: 6),
+                        Text(
+                          "BOX: ${_selectedBox!.label} (${_selectedBox!.qrCode})",
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: c.primaryDark,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const Divider(height: 20),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: _scannedPassports.map((p) => Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: c.card,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: c.border),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.badge_outlined, size: 12, color: c.textBody),
+                            const SizedBox(width: 4),
+                            Text(
+                              p.holderName,
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: c.textBody,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )).toList(),
+                    ),
+                  ],
+                ),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.inventory_2_outlined, size: 14, color: c.primary),
-                      const SizedBox(width: 6),
-                      Text(
-                        "BOX: ${_selectedBox!.label} (${_selectedBox!.qrCode})",
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: c.primaryDark,
+
+              // Action buttons
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 28),
+                child: Column(
+                  children: [
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        style: _buttonStyle,
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          context.pop();
+                        },
+                        child: Text(l.returnBackToDashboard),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: c.textBody,
+                          side: BorderSide(color: c.border),
+                          minimumSize: const Size.fromHeight(50),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        ),
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          _resetForNewBatch();
+                        },
+                        child: Text(
+                          l.returnAnotherBatch,
+                          style: const TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600, fontSize: 14),
                         ),
                       ),
-                    ],
-                  ),
-                  const Divider(height: 20),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: _scannedPassports.map((p) => Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: c.card,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: c.border),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.badge_outlined, size: 12, color: c.textBody),
-                          const SizedBox(width: 4),
-                          Text(
-                            p.holderName,
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: c.textBody,
-                            ),
-                          ),
-                        ],
-                      ),
-                    )).toList(),
-                  ),
-                ],
-              ),
-            ),
-
-            // Action buttons
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 24, 24, 28),
-              child: Column(
-                children: [
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      style: _buttonStyle,
-                      onPressed: () {
-                        Navigator.pop(ctx);
-                        context.pop();
-                      },
-                      child: Text(l.returnBackToDashboard),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: c.textBody,
-                        side: BorderSide(color: c.border),
-                        minimumSize: const Size.fromHeight(50),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      ),
-                      onPressed: () {
-                        Navigator.pop(ctx);
-                        _resetForNewBatch();
-                      },
-                      child: Text(
-                        l.returnAnotherBatch,
-                        style: const TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600, fontSize: 14),
-                      ),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
