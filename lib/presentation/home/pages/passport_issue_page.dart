@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/providers/dashboard_provider.dart';
 import '../../../data/repositories/passport_repository.dart';
 import '../../../data/models/passport.dart';
 import '../../../l10n/app_localizations.dart';
@@ -24,14 +26,14 @@ String _filterLabel(AppLocalizations l, _StatusFilter f) => switch (f) {
   _StatusFilter.all    => l.issueFilterAll,
 };
 
-class PassportIssuePage extends StatefulWidget {
+class PassportIssuePage extends ConsumerStatefulWidget {
   const PassportIssuePage({super.key});
 
   @override
-  State<PassportIssuePage> createState() => _PassportIssuePageState();
+  ConsumerState<PassportIssuePage> createState() => _PassportIssuePageState();
 }
 
-class _PassportIssuePageState extends State<PassportIssuePage> {
+class _PassportIssuePageState extends ConsumerState<PassportIssuePage> {
   final PassportRepository _passportRepo = PassportRepository();
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
@@ -152,6 +154,14 @@ class _PassportIssuePageState extends State<PassportIssuePage> {
           final l = AppLocalizations.of(context);
           if (success) {
             _showFeedback(l.issueIssuedTo(passport.holderName), false);
+            
+            // Invalidate all dashboard stats/activity providers
+            ref.invalidate(dashboardStatsProvider);
+            ref.invalidate(activityLogsProvider);
+            ref.invalidate(myActivityProvider);
+            ref.invalidate(activityTrendProvider);
+            ref.invalidate(roomOccupancyProvider);
+
             _fetchPassports(refresh: true);
           } else {
             _showFeedback(l.issueFailed, true);
@@ -1084,6 +1094,7 @@ class _IssueScanSheet extends StatefulWidget {
 class _IssueScanSheetState extends State<_IssueScanSheet> {
   final MobileScannerController _controller = MobileScannerController();
   bool _isScanning = true;
+  bool _isVerified = false;
   String? _errorMsg;
 
   @override
@@ -1093,7 +1104,7 @@ class _IssueScanSheetState extends State<_IssueScanSheet> {
   }
 
   void _onDetect(BarcodeCapture capture) {
-    if (!_isScanning) return;
+    if (!_isScanning || _isVerified) return;
     final code = capture.barcodes.firstOrNull?.rawValue;
     if (code != null) _verifyCode(code);
   }
@@ -1101,19 +1112,36 @@ class _IssueScanSheetState extends State<_IssueScanSheet> {
   void _verifyCode(String code) {
     setState(() => _isScanning = false);
     if (code == widget.passport.qrCode) {
-      widget.onVerified();
+      setState(() {
+        _isVerified = true;
+      });
     } else {
       setState(() => _errorMsg =
           AppLocalizations.of(context).issueWrongQr(widget.passport.qrCode));
       Future.delayed(const Duration(seconds: 3), () {
-        if (mounted) setState(() { _errorMsg = null; _isScanning = true; });
+        if (mounted) {
+          setState(() {
+            _errorMsg = null;
+            _isScanning = true;
+          });
+        }
       });
     }
+  }
+
+  void _resetScanner() {
+    setState(() {
+      _isVerified = false;
+      _isScanning = true;
+      _errorMsg = null;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
+    final l = AppLocalizations.of(context);
+
     return Container(
       decoration: BoxDecoration(
         color: c.card,
@@ -1132,74 +1160,199 @@ class _IssueScanSheetState extends State<_IssueScanSheet> {
             ),
           ),
           const SizedBox(height: 20),
-          Text(
-            AppLocalizations.of(context).issueScanToConfirm,
+
+          if (_isVerified) ...[
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: c.success.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.check_circle_rounded, color: c.success, size: 52),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              "Passport Identity Verified",
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: c.primaryDark,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              "Scanned QR matches successfully. Confirm details below:",
+              textAlign: TextAlign.center,
+              style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: c.textBody),
+            ),
+            const SizedBox(height: 20),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: c.surface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: c.border),
+              ),
+              child: Column(
+                children: [
+                  _buildConfirmRow(c, "Holder Name", widget.passport.holderName, isBold: true),
+                  const Divider(height: 16),
+                  _buildConfirmRow(c, "ID Number", widget.passport.holderIdNo),
+                  const Divider(height: 16),
+                  _buildConfirmRow(c, "QR Code", widget.passport.qrCode, isMono: true),
+                  if (widget.passport.location != null || widget.passport.box != null) ...[
+                    const Divider(height: 16),
+                    _buildConfirmRow(
+                      c,
+                      "Current Location",
+                      widget.passport.location ?? widget.passport.box?.label ?? 'N/A'
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: widget.onVerified,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: c.primary,
+                  foregroundColor: c.onPrimary,
+                  minimumSize: const Size.fromHeight(50),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                icon: const Icon(Icons.assignment_turned_in_rounded, size: 16),
+                label: const Text(
+                  "Confirm Handover & Issue",
+                  style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w700),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _resetScanner,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: c.textBody,
+                  side: BorderSide(color: c.border),
+                  minimumSize: const Size.fromHeight(50),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                icon: const Icon(Icons.qr_code_scanner_rounded, size: 16),
+                label: const Text(
+                  "Scan Again",
+                  style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600),
+                ),
+              ),
+            ),
+          ] else ...[
+            Text(
+              l.issueScanToConfirm,
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: c.primaryDark,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              widget.passport.holderName,
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 13,
+                color: c.textBody,
+              ),
+            ),
+            const SizedBox(height: 20),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: SizedBox(
+                height: 240,
+                width: double.infinity,
+                child: MobileScanner(controller: _controller, onDetect: _onDetect),
+              ),
+            ),
+            const SizedBox(height: 16),
+            if (_errorMsg != null)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: c.danger.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  _errorMsg!,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    color: c.danger,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                ),
+              )
+            else
+              Text(
+                l.issuePointCamera,
+                textAlign: TextAlign.center,
+                style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: c.textBody),
+              ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () => Navigator.pop(context),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: c.textBody,
+                  side: BorderSide(color: c.border),
+                  minimumSize: const Size.fromHeight(46),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                child: Text(l.cancel, style: const TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600)),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildConfirmRow(AppPalette c, String label, String value, {bool isBold = false, bool isMono = false}) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          flex: 2,
+          child: Text(
+            label,
             style: TextStyle(
               fontFamily: 'Inter',
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
+              fontSize: 12.5,
+              color: c.textBody,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          flex: 3,
+          child: Text(
+            value,
+            textAlign: TextAlign.end,
+            style: TextStyle(
+              fontFamily: isMono ? 'JetBrainsMono' : 'Inter',
+              fontSize: isMono ? 12 : 13,
+              fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
               color: c.primaryDark,
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            widget.passport.holderName,
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 13,
-              color: c.textBody,
-            ),
-          ),
-          const SizedBox(height: 20),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: SizedBox(
-              height: 240,
-              width: double.infinity,
-              child: MobileScanner(controller: _controller, onDetect: _onDetect),
-            ),
-          ),
-          const SizedBox(height: 16),
-          if (_errorMsg != null)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: c.danger.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                _errorMsg!,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  color: c.danger,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13,
-                ),
-              ),
-            )
-          else
-            Text(
-              AppLocalizations.of(context).issuePointCamera,
-              textAlign: TextAlign.center,
-              style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: c.textBody),
-            ),
-          const SizedBox(height: 20),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton(
-              onPressed: () => Navigator.pop(context),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: c.textBody,
-                side: BorderSide(color: c.border),
-                minimumSize: const Size.fromHeight(46),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-              child: Text(AppLocalizations.of(context).cancel, style: const TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600)),
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

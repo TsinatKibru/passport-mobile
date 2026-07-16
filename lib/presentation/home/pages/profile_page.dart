@@ -31,118 +31,128 @@ class ProfilePage extends ConsumerWidget {
     return Scaffold(
       backgroundColor: c.surface,
       body: FingerprintBackground(
-        child: CustomScrollView(
-          slivers: [
-            // Premium Large Header
-            SliverAppBar(
-              expandedHeight: 120,
-              floating: false,
-              pinned: true,
-              backgroundColor: c.appBar,
-              elevation: 0,
-              flexibleSpace: FlexibleSpaceBar(
-                titlePadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                title: Text(
-                  l.profileTitle,
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                    color: c.primaryDark,
+        child: RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(myActivityProvider);
+            try {
+              await ref.read(myActivityProvider.future);
+            } catch (_) {}
+          },
+          color: c.primary,
+          child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
+              // Premium Large Header
+              SliverAppBar(
+                expandedHeight: 120,
+                floating: false,
+                pinned: true,
+                backgroundColor: c.appBar,
+                elevation: 0,
+                flexibleSpace: FlexibleSpaceBar(
+                  titlePadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  title: Text(
+                    l.profileTitle,
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                      color: c.primaryDark,
+                    ),
+                  ),
+                ),
+                actions: [
+                  IconButton(
+                    icon: Icon(Icons.logout_rounded, color: c.danger),
+                    onPressed: () {
+                      _showLogoutConfirm(context, ref);
+                    },
+                  ),
+                  const SizedBox(width: 8),
+                ],
+              ),
+              
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Digital Staff ID Card
+                      _buildStaffIdCard(context, l, name, email, role, staffId,
+                          isActive, memberSince),
+                      const SizedBox(height: 24),
+
+                      // Stats section
+                      _buildStatsSection(context, l, activity),
+                      const SizedBox(height: 24),
+
+                      // Options List
+                      Text(
+                        l.accountSettings,
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: c.textBody,
+                          letterSpacing: 0.8,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+
+                      _buildOptionTile(
+                        context: context,
+                        icon: Icons.lock_outline_rounded,
+                        title: l.changePassword,
+                        subtitle: l.changePasswordDesc,
+                        onTap: () => _showChangePasswordDialog(context, ref),
+                      ),
+                      _buildOptionTile(
+                        context: context,
+                        icon: Icons.translate_rounded,
+                        title: l.appLanguage,
+                        subtitle: _languageLabel(l, ref.watch(localeProvider)),
+                        onTap: () => _showLanguagePicker(context, ref),
+                      ),
+                      _buildOptionTile(
+                        context: context,
+                        icon: Icons.dark_mode_outlined,
+                        title: l.appTheme,
+                        subtitle: _themeLabel(l, ref.watch(themeProvider)),
+                        onTap: () => _showThemePicker(context, ref),
+                      ),
+                      _buildOptionTile(
+                        context: context,
+                        icon: Icons.info_outline_rounded,
+                        title: l.aboutSystem,
+                        subtitle: l.aboutSystemDesc,
+                        onTap: () {
+                          _showInfoDialog(
+                              context, l.aboutInfoTitle, l.aboutInfoBody);
+                        },
+                      ),
+
+                      const SizedBox(height: 32),
+
+                      // System info footer
+                      Text(
+                        l.orgFooter,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: c.textBody.withOpacity(0.5),
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 40),
+                    ],
                   ),
                 ),
               ),
-              actions: [
-                IconButton(
-                  icon: Icon(Icons.logout_rounded, color: c.danger),
-                  onPressed: () {
-                    _showLogoutConfirm(context, ref);
-                  },
-                ),
-                const SizedBox(width: 8),
-              ],
-            ),
-            
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Digital Staff ID Card
-                    _buildStaffIdCard(context, l, name, email, role, staffId,
-                        isActive, memberSince),
-                    const SizedBox(height: 24),
-
-                    // Stats section
-                    _buildStatsSection(context, l, activity),
-                    const SizedBox(height: 24),
-
-                    // Options List
-                    Text(
-                      l.accountSettings,
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: c.textBody,
-                        letterSpacing: 0.8,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-
-                    _buildOptionTile(
-                      context: context,
-                      icon: Icons.lock_outline_rounded,
-                      title: l.changePassword,
-                      subtitle: l.changePasswordDesc,
-                      onTap: () => _showChangePasswordDialog(context, ref),
-                    ),
-                    _buildOptionTile(
-                      context: context,
-                      icon: Icons.translate_rounded,
-                      title: l.appLanguage,
-                      subtitle: _languageLabel(l, ref.watch(localeProvider)),
-                      onTap: () => _showLanguagePicker(context, ref),
-                    ),
-                    _buildOptionTile(
-                      context: context,
-                      icon: Icons.dark_mode_outlined,
-                      title: l.appTheme,
-                      subtitle: _themeLabel(l, ref.watch(themeProvider)),
-                      onTap: () => _showThemePicker(context, ref),
-                    ),
-                    _buildOptionTile(
-                      context: context,
-                      icon: Icons.info_outline_rounded,
-                      title: l.aboutSystem,
-                      subtitle: l.aboutSystemDesc,
-                      onTap: () {
-                        _showInfoDialog(
-                            context, l.aboutInfoTitle, l.aboutInfoBody);
-                      },
-                    ),
-
-                    const SizedBox(height: 32),
-
-                    // System info footer
-                    Text(
-                      l.orgFooter,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                        color: c.textBody.withOpacity(0.5),
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                    const SizedBox(height: 40),
-                  ],
-                ),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

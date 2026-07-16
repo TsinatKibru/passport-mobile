@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/repositories/auth_repository.dart';
 import '../data/models/user.dart';
+import 'providers/dashboard_provider.dart';
 
 enum AuthStatus { unknown, authenticated, unauthenticated }
 
@@ -67,6 +68,7 @@ class AuthNotifier extends Notifier<AuthState> {
         status: AuthStatus.authenticated,
         user: user,
       );
+      _invalidateDashboardProviders();
       return true;
     } else {
       state = AuthState(
@@ -81,6 +83,15 @@ class AuthNotifier extends Notifier<AuthState> {
     final repo = ref.read(authRepositoryProvider);
     await repo.logout();
     state = AuthState(status: AuthStatus.unauthenticated);
+    _invalidateDashboardProviders();
+  }
+
+  void _invalidateDashboardProviders() {
+    ref.invalidate(dashboardStatsProvider);
+    ref.invalidate(activityLogsProvider);
+    ref.invalidate(activityTrendProvider);
+    ref.invalidate(roomOccupancyProvider);
+    ref.invalidate(myActivityProvider);
   }
 }
 
@@ -89,3 +100,4 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) => AuthRepository(
 final authProvider = NotifierProvider<AuthNotifier, AuthState>(() {
   return AuthNotifier();
 });
+
