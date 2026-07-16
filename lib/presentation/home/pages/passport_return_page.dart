@@ -70,20 +70,32 @@ class _PassportReturnPageState extends ConsumerState<PassportReturnPage> {
   String? _mismatchMessage;
 
   final ScrollController _step3ScrollController = ScrollController();
+  final ScrollController _boxScrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
     _loadRooms();
+    _boxScrollController.addListener(_onBoxScroll);
   }
 
   @override
   void dispose() {
     _boxSearchController.dispose();
     _step3ScrollController.dispose();
+    _boxScrollController.dispose();
     _searchDebounceTimer?.cancel();
     _scanDebounceTimer?.cancel();
     super.dispose();
+  }
+
+  void _onBoxScroll() {
+    if (!_boxScrollController.hasClients) return;
+    final maxScroll = _boxScrollController.position.maxScrollExtent;
+    final currentScroll = _boxScrollController.position.pixels;
+    if (currentScroll >= maxScroll * 0.85) {
+      _loadNextPage();
+    }
   }
 
   // Feedback display helper
@@ -315,23 +327,9 @@ class _PassportReturnPageState extends ConsumerState<PassportReturnPage> {
   }
 
   void _loadNextPage() {
-    if (_hasMoreBoxes && !_isLoadingBoxes) {
-      setState(() => _currentPage++);
-      _loadAvailableBoxes(resetPage: false);
-    }
-  }
-
-  void _goToPreviousPage() {
-    if (_currentPage > 1 && !_isLoadingBoxes) {
-      setState(() => _currentPage--);
-      _loadAvailableBoxes(resetPage: true);
-    }
-  }
-
-  void _goToNextPage() {
     if (_currentPage < _totalPages && !_isLoadingBoxes) {
       setState(() => _currentPage++);
-      _loadAvailableBoxes(resetPage: true);
+      _loadAvailableBoxes(resetPage: false);
     }
   }
 
@@ -1053,25 +1051,22 @@ class _PassportReturnPageState extends ConsumerState<PassportReturnPage> {
       );
     }
 
+    final hasNextPage = _currentPage < _totalPages;
+
     return Column(
       children: [
         Expanded(
           child: ListView.separated(
-            itemCount: _availableBoxes.length + (_hasMoreBoxes ? 1 : 0),
+            controller: _boxScrollController,
+            itemCount: _availableBoxes.length + (hasNextPage ? 1 : 0),
             separatorBuilder: (_, __) => const SizedBox(height: 10),
             itemBuilder: (ctx, idx) {
               if (idx == _availableBoxes.length) {
-                return Center(
-                  child: _isLoadingBoxes
-                      ? const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 8),
-                          child: CircularProgressIndicator(),
-                        )
-                      : OutlinedButton.icon(
-                          onPressed: _loadNextPage,
-                          icon: const Icon(Icons.expand_more),
-                          label: Text(l.returnLoadMoreRemaining(_totalBoxes - _availableBoxes.length)),
-                        ),
+                return const Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    child: CircularProgressIndicator(),
+                  ),
                 );
               }
 
@@ -1083,7 +1078,6 @@ class _PassportReturnPageState extends ConsumerState<PassportReturnPage> {
             },
           ),
         ),
-        if (_totalPages > 1) _buildPaginationControls(),
       ],
     );
   }
@@ -1145,32 +1139,6 @@ class _PassportReturnPageState extends ConsumerState<PassportReturnPage> {
             ],
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildPaginationControls() {
-    final l = AppLocalizations.of(context);
-    return Padding(
-      padding: const EdgeInsets.only(top: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          TextButton.icon(
-            onPressed: _currentPage > 1 && !_isLoadingBoxes ? _goToPreviousPage : null,
-            icon: const Icon(Icons.chevron_left),
-            label: Text(l.returnPrevious),
-          ),
-          Text(
-            l.returnPageOf(_currentPage, _totalPages),
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-          ),
-          TextButton.icon(
-            onPressed: _currentPage < _totalPages && !_isLoadingBoxes ? _goToNextPage : null,
-            icon: const Icon(Icons.chevron_right),
-            label: Text(l.returnNext),
-          ),
-        ],
       ),
     );
   }
