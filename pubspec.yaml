@@ -72,6 +72,8 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
     - assets/images/ics-logo.png
+    - assets/images/dark_mode_brand.png
+    - assets/images/light_mode_brand.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

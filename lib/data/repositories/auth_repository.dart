@@ -8,23 +8,19 @@ class AuthRepository extends BaseRepository {
   final _storage = const FlutterSecureStorage();
 
   Future<User?> login(String email, String password) async {
-    try {
-      final res = await dio.post('/auth/login', data: {
-        'email': email,
-        'password': password,
-      });
-      final token = res.data['accessToken'] as String;
-      await _storage.write(key: 'accessToken', value: token);
-      
-      // Fetch user profile
-      final user = await getCurrentUser();
-      if (user != null) {
-        await _storage.write(key: 'user', value: jsonEncode(user.toJson()));
-      }
-      return user;
-    } catch (e) {
-      return null;
+    final res = await dio.post('/auth/login', data: {
+      'email': email,
+      'password': password,
+    });
+    final token = res.data['accessToken'] as String;
+    await _storage.write(key: 'accessToken', value: token);
+    
+    // Fetch user profile
+    final user = await getCurrentUser();
+    if (user != null) {
+      await _storage.write(key: 'user', value: jsonEncode(user.toJson()));
     }
+    return user;
   }
 
   Future<User?> getCurrentUser() async {
@@ -74,6 +70,44 @@ class AuthRepository extends BaseRepository {
       return msg?.toString() ?? 'Could not change password';
     } catch (_) {
       return 'Could not change password';
+    }
+  }
+
+  /// POST /auth/forgot-password — returns null on success, else an error message.
+  Future<String?> requestPasswordResetOtp(String email) async {
+    try {
+      await dio.post('/auth/forgot-password', data: {'email': email});
+      return null;
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      final msg = data is Map ? data['message'] : null;
+      if (msg is List) return msg.join('\n');
+      return msg?.toString() ?? 'Could not request OTP';
+    } catch (_) {
+      return 'Could not request OTP';
+    }
+  }
+
+  /// POST /auth/reset-password — returns null on success, else an error message.
+  Future<String?> resetPasswordWithOtp({
+    required String email,
+    required String otp,
+    required String newPassword,
+  }) async {
+    try {
+      await dio.post('/auth/reset-password', data: {
+        'email': email,
+        'otp': otp,
+        'newPassword': newPassword,
+      });
+      return null;
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      final msg = data is Map ? data['message'] : null;
+      if (msg is List) return msg.join('\n');
+      return msg?.toString() ?? 'Could not reset password';
+    } catch (_) {
+      return 'Could not reset password';
     }
   }
 }

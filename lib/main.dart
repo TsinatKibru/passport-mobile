@@ -5,6 +5,8 @@ import 'core/locale_provider.dart';
 import 'core/theme_provider.dart';
 import 'core/theme/app_theme.dart';
 import 'l10n/app_localizations.dart';
+import 'data/api/api_client.dart';
+import 'core/auth_provider.dart';
 
 void main() {
   runApp(
@@ -19,6 +21,11 @@ class MyApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Setup unauthorized callback to automatically clear session and redirect to login
+    ApiClient.onUnauthorized = () {
+      ref.read(authProvider.notifier).logout();
+    };
+
     final router = ref.watch(routerProvider);
     final locale = ref.watch(localeProvider);
     final themeMode = ref.watch(themeProvider);

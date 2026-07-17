@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:dio/dio.dart';
 import '../data/repositories/auth_repository.dart';
 import '../data/models/user.dart';
 import 'providers/dashboard_provider.dart';
@@ -42,11 +43,27 @@ class AuthNotifier extends Notifier<AuthState> {
     try {
       final loggedIn = await repo.isLoggedIn();
       if (loggedIn) {
-        final user = await repo.getCachedUser();
-        state = AuthState(
-          status: AuthStatus.authenticated,
-          user: user,
-        );
+        // Verify token validity with server on startup
+        final freshUser = await repo.getCurrentUser();
+        if (freshUser != null) {
+          state = AuthState(
+            status: AuthStatus.authenticated,
+            user: freshUser,
+          );
+        } else {
+          // If profile fetch failed, check if token was deleted by the 401 interceptor
+          final stillHasToken = await repo.isLoggedIn();
+          if (!stillHasToken) {
+            state = AuthState(status: AuthStatus.unauthenticated);
+          } else {
+            // Server was offline or unreachable: fall back to cached user profile
+            final user = await repo.getCachedUser();
+            state = AuthState(
+              status: AuthStatus.authenticated,
+              user: user,
+            );
+          }
+        }
       } else {
         state = AuthState(status: AuthStatus.unauthenticated);
       }
@@ -62,18 +79,42 @@ class AuthNotifier extends Notifier<AuthState> {
   Future<bool> login(String email, String password) async {
     state = state.copyWith(errorMessage: null);
     final repo = ref.read(authRepositoryProvider);
-    final user = await repo.login(email, password);
-    if (user != null) {
-      state = AuthState(
-        status: AuthStatus.authenticated,
-        user: user,
-      );
-      _invalidateDashboardProviders();
-      return true;
-    } else {
+    try {
+      final user = await repo.login(email, password);
+      if (user != null) {
+        state = AuthState(
+          status: AuthStatus.authenticated,
+          user: user,
+        );
+        _invalidateDashboardProviders();
+        return true;
+      } else {
+        state = AuthState(
+          status: AuthStatus.unauthenticated,
+          errorMessage: 'Invalid credentials or connection error',
+        );
+        return false;
+      }
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      final msg = data is Map ? data['message'] : null;
+      String errorMsg = 'Connection error';
+      if (msg is List) {
+        errorMsg = msg.join('\n');
+      } else if (msg != null) {
+        errorMsg = msg.toString();
+      } else if (e.response?.statusCode == 401) {
+        errorMsg = 'Invalid credentials';
+      }
       state = AuthState(
         status: AuthStatus.unauthenticated,
-        errorMessage: 'Invalid credentials or connection error',
+        errorMessage: errorMsg,
+      );
+      return false;
+    } catch (_) {
+      state = AuthState(
+        status: AuthStatus.unauthenticated,
+        errorMessage: 'Connection error',
       );
       return false;
     }

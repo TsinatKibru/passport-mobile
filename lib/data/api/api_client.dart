@@ -3,7 +3,8 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 const _baseUrl = String.fromEnvironment(
   'API_BASE_URL',
-  defaultValue: 'https://passport-api-seven.vercel.app/api',
+  // defaultValue: 'https://passport-api-seven.vercel.app/api',
+    defaultValue: 'http://192.168.0.5:3000/api',
 );
 
 /// Single Dio instance for all API calls — CONVENTIONS.md §1.
@@ -13,6 +14,9 @@ class ApiClient {
   ApiClient._();
 
   static final ApiClient instance = ApiClient._();
+
+  /// Global callback for 401 Unauthorized errors to notify authentication state providers.
+  static void Function()? onUnauthorized;
 
   final _storage = const FlutterSecureStorage();
 
@@ -50,9 +54,16 @@ class _AuthInterceptor extends Interceptor {
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) {
-    // 401 → clear token (router will redirect to login via Riverpod auth state)
+    // 401 → clear token and user cache, then trigger global unauthorized callback
     if (err.response?.statusCode == 401) {
       _storage.delete(key: 'accessToken');
+      _storage.delete(key: 'user');
+      
+      // Do not trigger global logout for login requests (which naturally return 401 on bad credentials)
+      final isLoginRequest = err.requestOptions.path.contains('/auth/login');
+      if (!isLoginRequest && ApiClient.onUnauthorized != null) {
+        ApiClient.onUnauthorized!();
+      }
     }
     handler.next(err);
   }
