@@ -30,35 +30,51 @@ class GlassCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cardBorderColor = borderColor ?? Colors.white.withOpacity(0.6);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final cardBorderColor = borderColor ??
+        (isDark ? Colors.white.withOpacity(0.08) : Colors.white.withOpacity(0.6));
     
     final defaultGradient = LinearGradient(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
-      colors: [
-        Colors.white.withOpacity(0.85),
-        Colors.white.withOpacity(0.65),
-      ],
+      colors: isDark
+          ? [
+              Colors.white.withOpacity(0.07),
+              Colors.white.withOpacity(0.02),
+            ]
+          : [
+              Colors.white.withOpacity(0.85),
+              Colors.white.withOpacity(0.65),
+            ],
     );
 
-    final defaultShadows = [
-      BoxShadow(
-        color: const Color(0xFF1E293B).withOpacity(0.04), // Slate-800
-        blurRadius: 16,
-        offset: const Offset(0, 8),
-      ),
-      BoxShadow(
-        color: const Color(0xFF1E293B).withOpacity(0.02),
-        blurRadius: 4,
-        offset: const Offset(0, 2),
-      ),
-    ];
+    final defaultShadows = isDark
+        ? [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.2),
+              blurRadius: 16,
+              offset: const Offset(0, 8),
+            ),
+          ]
+        : [
+            BoxShadow(
+              color: const Color(0xFF1E293B).withOpacity(0.04), // Slate-800
+              blurRadius: 16,
+              offset: const Offset(0, 8),
+            ),
+            BoxShadow(
+              color: const Color(0xFF1E293B).withOpacity(0.02),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ];
 
     return Container(
       width: width,
       height: height,
       decoration: BoxDecoration(
-        color: backgroundColor ?? (gradient == null ? Colors.white : null),
+        color: backgroundColor ?? (gradient == null ? (isDark ? Colors.white.withOpacity(0.05) : Colors.white) : null),
         gradient: backgroundColor == null ? (gradient ?? defaultGradient) : null,
         borderRadius: BorderRadius.circular(borderRadius),
         border: Border.all(
