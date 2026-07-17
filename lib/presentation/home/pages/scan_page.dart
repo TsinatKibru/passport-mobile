@@ -28,7 +28,8 @@ class ScanPage extends ConsumerStatefulWidget {
 
 class _ScanPageState extends ConsumerState<ScanPage>
     with SingleTickerProviderStateMixin, WidgetsBindingObserver {
-  final MobileScannerController _scannerController = MobileScannerController();
+  final MobileScannerController _scannerController =
+      MobileScannerController(autoStart: false);
   final PassportRepository _passportRepo = PassportRepository();
   final BoxRepository _boxRepo = BoxRepository();
   final TextEditingController _manualController = TextEditingController();
@@ -54,6 +55,24 @@ class _ScanPageState extends ConsumerState<ScanPage>
   Passport? _scannedSinglePassport;
   Map<String, dynamic>? _scannedSlot;
 
+  Future<void> _startScanner() async {
+    if (_scannerController.value.isRunning) return;
+    try {
+      await _scannerController.start();
+    } catch (e) {
+      debugPrint('Failed to start mobile scanner: $e');
+    }
+  }
+
+  Future<void> _stopScanner() async {
+    if (!_scannerController.value.isRunning) return;
+    try {
+      await _scannerController.stop();
+    } catch (e) {
+      debugPrint('Failed to stop mobile scanner: $e');
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -73,7 +92,7 @@ class _ScanPageState extends ConsumerState<ScanPage>
     // isn't held open behind other tabs in the IndexedStack.
     WidgetsBinding.instance.addObserver(this);
     if (widget.isActive) {
-      unawaited(_scannerController.start());
+      unawaited(_startScanner());
     }
   }
 
@@ -82,7 +101,7 @@ class _ScanPageState extends ConsumerState<ScanPage>
     super.didUpdateWidget(oldWidget);
     if (widget.isActive != oldWidget.isActive) {
       unawaited(
-        widget.isActive ? _scannerController.start() : _scannerController.stop(),
+        widget.isActive ? _startScanner() : _stopScanner(),
       );
     }
   }
@@ -91,9 +110,9 @@ class _ScanPageState extends ConsumerState<ScanPage>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (!widget.isActive) return;
     if (state == AppLifecycleState.resumed) {
-      unawaited(_scannerController.start());
+      unawaited(_startScanner());
     } else {
-      unawaited(_scannerController.stop());
+      unawaited(_stopScanner());
     }
   }
 
