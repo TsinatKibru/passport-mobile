@@ -197,7 +197,7 @@ abstract class AppLocalizations {
   /// No description provided for @orgFooter.
   ///
   /// In en, this message translates to:
-  /// **'IMMIGRATION & CITIZENSHIP SERVICE (ICS)'**
+  /// **'Designed and developed by Melfan Tech'**
   String get orgFooter;
 
   /// No description provided for @signOut.
@@ -239,7 +239,7 @@ abstract class AppLocalizations {
   /// No description provided for @aboutInfoBody.
   ///
   /// In en, this message translates to:
-  /// **'Passport Custody & Tracking Mobile Client\nBuild: 2026.07.13.1\nDepartment: Ministry of Immigration (ICS)'**
+  /// **'Passport Custody & Tracking Mobile Client\nBuild: 2026.07.13.1\nDesigned and developed by Melfan Tech'**
   String get aboutInfoBody;
 
   /// No description provided for @currentPassword.

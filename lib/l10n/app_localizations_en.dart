@@ -57,7 +57,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get statusInactive => 'Inactive';
 
   @override
-  String get orgFooter => 'IMMIGRATION & CITIZENSHIP SERVICE (ICS)';
+  String get orgFooter => 'Designed and developed by Melfan Tech';
 
   @override
   String get signOut => 'Sign Out';
@@ -80,7 +80,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aboutInfoBody =>
-      'Passport Custody & Tracking Mobile Client\nBuild: 2026.07.13.1\nDepartment: Ministry of Immigration (ICS)';
+      'Passport Custody & Tracking Mobile Client\nBuild: 2026.07.13.1\nDesigned and developed by Melfan Tech';
 
   @override
   String get currentPassword => 'Current password';

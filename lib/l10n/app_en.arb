@@ -17,7 +17,7 @@
   "metaMemberSince": "MEMBER SINCE",
   "statusActive": "Active",
   "statusInactive": "Inactive",
-  "orgFooter": "IMMIGRATION & CITIZENSHIP SERVICE (ICS)",
+  "orgFooter": "Designed and developed by Melfan Tech",
 
   "signOut": "Sign Out",
   "signOutConfirm": "Are you sure you want to log out of the Passport Custody & Tracking system?",
@@ -26,7 +26,7 @@
   "ok": "OK",
 
   "aboutInfoTitle": "App Information",
-  "aboutInfoBody": "Passport Custody & Tracking Mobile Client\nBuild: 2026.07.13.1\nDepartment: Ministry of Immigration (ICS)",
+  "aboutInfoBody": "Passport Custody & Tracking Mobile Client\nBuild: 2026.07.13.1\nDesigned and developed by Melfan Tech",
 
   "currentPassword": "Current password",
   "newPassword": "New password",

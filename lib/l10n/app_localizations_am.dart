@@ -57,7 +57,7 @@ class AppLocalizationsAm extends AppLocalizations {
   String get statusInactive => 'ንቁ ያልሆነ';
 
   @override
-  String get orgFooter => 'የኢሚግሬሽንና ዜግነት አገልግሎት (ICS)';
+  String get orgFooter => 'በ Melfan Tech የተነደፈ እና የዳበረ';
 
   @override
   String get signOut => 'መውጣት';
@@ -79,7 +79,7 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get aboutInfoBody =>
-      'የፓስፖርት ጥበቃና ክትትል ሞባይል መተግበሪያ\nግንባታ: 2026.07.13.1\nመምሪያ: የኢሚግሬሽን ሚኒስቴር (ICS)';
+      'የፓስፖርት ጥበቃና ክትትል ሞባይል መተግበሪያ\nግንባታ: 2026.07.13.1\nበ Melfan Tech የተነደፈ እና የዳበረ';
 
   @override
   String get currentPassword => 'የአሁኑ ይለፍ ቃል';
