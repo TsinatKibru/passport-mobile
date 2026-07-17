@@ -735,19 +735,16 @@ class _ScanPageState extends ConsumerState<ScanPage>
     final c = context.colors;
     return Container(
       color: c.appBar,
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Row(
-          children: [
-            _buildModeTab('assign', l.scanModeAssign, Icons.inventory_2_rounded, c),
-            _buildModeTab('return', l.scanModeReturn, Icons.swap_horizontal_circle_rounded, c),
-            _buildModeTab('issue', l.scanModeIssue, Icons.assignment_turned_in_rounded, c),
-            _buildModeTab('move_box', l.scanModeMove, Icons.drive_file_move_outlined, c),
-            _buildModeTab('verify', l.scanModeVerify, Icons.verified_user_rounded, c),
-          ],
-        ),
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          _buildModeTab('assign', l.scanModeAssign, Icons.inventory_2_rounded, c),
+          _buildModeTab('return', l.scanModeReturn, Icons.swap_horizontal_circle_rounded, c),
+          _buildModeTab('issue', l.scanModeIssue, Icons.assignment_turned_in_rounded, c),
+          _buildModeTab('move_box', l.scanModeMove, Icons.drive_file_move_outlined, c),
+          _buildModeTab('verify', l.scanModeVerify, Icons.verified_user_rounded, c),
+        ],
       ),
     );
   }
@@ -755,9 +752,23 @@ class _ScanPageState extends ConsumerState<ScanPage>
   Widget _buildModeTab(String mode, String label, IconData icon, AppPalette c) {
     final isActive = _activeMode == mode;
     return GestureDetector(
-      onTap: () {
+      onTap: () async {
         if (mode == 'return') {
-          context.push('/scan?mode=return');
+          final previousMode = _activeMode;
+          setState(() {
+            _activeMode = mode;
+          });
+          // Wait for the expansion animation to complete
+          await Future.delayed(const Duration(milliseconds: 200));
+          if (!mounted) return;
+
+          await context.push('/scan?mode=return');
+
+          if (mounted) {
+            setState(() {
+              _activeMode = previousMode;
+            });
+          }
           return;
         }
         setState(() {
@@ -765,12 +776,16 @@ class _ScanPageState extends ConsumerState<ScanPage>
           _resetCurrentScan();
         });
       },
-      child: Container(
-        margin: const EdgeInsets.only(right: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeInOut,
+        padding: EdgeInsets.symmetric(
+          horizontal: isActive ? 14 : 12,
+          vertical: 10,
+        ),
         decoration: BoxDecoration(
           color: isActive ? c.primary.withOpacity(0.08) : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(24),
           border: Border.all(
             color: isActive ? c.primary : Colors.transparent,
             width: 1,
@@ -781,18 +796,20 @@ class _ScanPageState extends ConsumerState<ScanPage>
           children: [
             Icon(
               icon,
-              size: 14,
+              size: isActive ? 16 : 22,
               color: isActive ? c.primary : c.textBody,
             ),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
-                color: isActive ? c.primary : c.textBody,
+            if (isActive) ...[
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: c.primary,
+                ),
               ),
-            ),
+            ],
           ],
         ),
       ),
