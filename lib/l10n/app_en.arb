@@ -378,6 +378,9 @@
   "vaultQrLabel": "QR: {qr}",
   "@vaultQrLabel": { "placeholders": { "qr": {} } },
 
+  "biometricSecurity": "Biometric Security",
+  "biometricSecurityDesc": "Protect your active session using fingerprint or Face ID",
+  "biometricNotSupported": "Biometrics not supported or enrolled on this device",
   "appTheme": "Theme",
   "selectTheme": "Select Theme",
   "themeLight": "Light",

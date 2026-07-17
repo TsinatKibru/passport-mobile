@@ -7,6 +7,7 @@ import '../presentation/home/home_screen.dart';
 import '../presentation/home/pages/scan_page.dart';
 import '../presentation/home/pages/passport_issue_page.dart';
 import '../presentation/home/pages/passport_return_page.dart';
+import '../presentation/home/widgets/biometric_guard.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authProvider);
@@ -45,7 +46,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               ),
             );
           }
-          return const HomeScreen();
+          return const BiometricGuard(child: HomeScreen());
         },
       ),
       GoRoute(
@@ -56,12 +57,15 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/scan',
         builder: (context, state) {
           final mode = state.uri.queryParameters['mode'] ?? 'assign';
+          Widget pageWidget;
           if (mode == 'issue') {
-            return const PassportIssuePage();
+            pageWidget = const PassportIssuePage();
           } else if (mode == 'return') {
-            return const PassportReturnPage();
+            pageWidget = const PassportReturnPage();
+          } else {
+            pageWidget = ScanPage(initialMode: mode);
           }
-          return ScanPage(initialMode: mode);
+          return BiometricGuard(child: pageWidget);
         },
       ),
     ],

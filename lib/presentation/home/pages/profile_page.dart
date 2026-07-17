@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/auth_provider.dart';
+import '../../../core/biometric_provider.dart';
 import '../../../core/locale_provider.dart';
 import '../../../core/theme_provider.dart';
 import '../../../core/providers/dashboard_provider.dart';
@@ -100,13 +101,14 @@ class ProfilePage extends ConsumerWidget {
                       ),
                       const SizedBox(height: 10),
 
-                      _buildOptionTile(
+                       _buildOptionTile(
                         context: context,
                         icon: Icons.lock_outline_rounded,
                         title: l.changePassword,
                         subtitle: l.changePasswordDesc,
                         onTap: () => _showChangePasswordDialog(context, ref),
                       ),
+                     
                       _buildOptionTile(
                         context: context,
                         icon: Icons.translate_rounded,
@@ -121,6 +123,7 @@ class ProfilePage extends ConsumerWidget {
                         subtitle: _themeLabel(l, ref.watch(themeProvider)),
                         onTap: () => _showThemePicker(context, ref),
                       ),
+                       _buildBiometricTile(context, ref, l),
                       _buildOptionTile(
                         context: context,
                         icon: Icons.info_outline_rounded,
@@ -476,6 +479,75 @@ class ProfilePage extends ConsumerWidget {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBiometricTile(BuildContext context, WidgetRef ref, AppLocalizations l) {
+    final c = context.colors;
+    final bioState = ref.watch(biometricProvider);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: GlassCard(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        borderRadius: 16,
+        backgroundColor: c.card,
+        borderColor: c.border,
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: c.primary.withValues(alpha: 0.06),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.fingerprint_rounded, color: c.primary, size: 18),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l.biometricSecurity,
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: bioState.isSupported ? c.onSurface : c.onSurface.withValues(alpha: 0.5),
+                    ),
+                  ),
+                  const SizedBox(height: 1),
+                  Text(
+                    bioState.isSupported ? l.biometricSecurityDesc : l.biometricNotSupported,
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 11,
+                      color: c.textBody,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (bioState.isSupported)
+              Switch.adaptive(
+                value: bioState.isEnabled,
+                onChanged: (val) async {
+                  final errorMsg = await ref.read(biometricProvider.notifier).setBiometricEnabled(val);
+                  if (errorMsg != null && context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(errorMsg),
+                        backgroundColor: c.danger,
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                },
+              ),
+          ],
         ),
       ),
     );

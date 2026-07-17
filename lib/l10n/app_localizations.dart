@@ -1898,6 +1898,24 @@ abstract class AppLocalizations {
   /// **'QR: {qr}'**
   String vaultQrLabel(Object qr);
 
+  /// No description provided for @biometricSecurity.
+  ///
+  /// In en, this message translates to:
+  /// **'Biometric Security'**
+  String get biometricSecurity;
+
+  /// No description provided for @biometricSecurityDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Protect your active session using fingerprint or Face ID'**
+  String get biometricSecurityDesc;
+
+  /// No description provided for @biometricNotSupported.
+  ///
+  /// In en, this message translates to:
+  /// **'Biometrics not supported or enrolled on this device'**
+  String get biometricNotSupported;
+
   /// No description provided for @appTheme.
   ///
   /// In en, this message translates to:

@@ -1058,6 +1058,17 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get biometricSecurity => 'Biometric Security';
+
+  @override
+  String get biometricSecurityDesc =>
+      'Protect your active session using fingerprint or Face ID';
+
+  @override
+  String get biometricNotSupported =>
+      'Biometrics not supported or enrolled on this device';
+
+  @override
   String get appTheme => 'Theme';
 
   @override

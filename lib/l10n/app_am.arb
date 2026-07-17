@@ -316,6 +316,9 @@
   "vaultPosition": "ቦታ {position}",
   "vaultQrLabel": "QR፦ {qr}",
 
+  "biometricSecurity": "ባዮሜትሪክ ደህንነት",
+  "biometricSecurityDesc": "የጣት አሻራ ወይም የፊት መታወቂያ በመጠቀም የነቃውን ክፍለ ጊዜ ይጠብቁ",
+  "biometricNotSupported": "ባዮሜትሪክስ በዚህ መሣሪያ ላይ አይደገፍም ወይም አልተመዘገበም",
   "appTheme": "ገጽታ",
   "selectTheme": "ገጽታ ይምረጡ",
   "themeLight": "ብሩህ",

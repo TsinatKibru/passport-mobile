@@ -1046,6 +1046,16 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
+  String get biometricSecurity => 'ባዮሜትሪክ ደህንነት';
+
+  @override
+  String get biometricSecurityDesc =>
+      'የጣት አሻራ ወይም የፊት መታወቂያ በመጠቀም የነቃውን ክፍለ ጊዜ ይጠብቁ';
+
+  @override
+  String get biometricNotSupported => 'ባዮሜትሪክስ በዚህ መሣሪያ ላይ አይደገፍም ወይም አልተመዘገበም';
+
+  @override
   String get appTheme => 'ገጽታ';
 
   @override
