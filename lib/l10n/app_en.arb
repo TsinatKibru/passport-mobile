@@ -381,6 +381,7 @@
   "biometricSecurity": "Biometric Security",
   "biometricSecurityDesc": "Protect your active session using fingerprint or Face ID",
   "biometricNotSupported": "Biometrics not supported or enrolled on this device",
+  "pressBackAgainToExit": "Press back again to exit",
   "appTheme": "Theme",
   "selectTheme": "Select Theme",
   "themeLight": "Light",

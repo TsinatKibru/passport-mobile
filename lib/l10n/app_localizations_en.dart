@@ -1069,6 +1069,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Biometrics not supported or enrolled on this device';
 
   @override
+  String get pressBackAgainToExit => 'Press back again to exit';
+
+  @override
   String get appTheme => 'Theme';
 
   @override

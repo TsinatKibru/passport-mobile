@@ -1056,6 +1056,9 @@ class AppLocalizationsAm extends AppLocalizations {
   String get biometricNotSupported => 'ባዮሜትሪክስ በዚህ መሣሪያ ላይ አይደገፍም ወይም አልተመዘገበም';
 
   @override
+  String get pressBackAgainToExit => 'ለመውጣት የጀርባ አዝራሩን እንደገና ይጫኑ';
+
+  @override
   String get appTheme => 'ገጽታ';
 
   @override

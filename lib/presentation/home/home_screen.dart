@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../l10n/app_localizations.dart';
 import 'dashboard_page.dart';
 import 'pages/tasks_page.dart';
 import 'pages/scan_page.dart';
@@ -16,15 +18,11 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   int _selectedIndex = 0;
-
-  // Mode the Scan tab opens in. Dashboard shortcuts can preselect a mode
-  // (e.g. 'verify') so the scanner opens on the right tab with the bottom nav
-  // still visible — instead of pushing a separate, nav-less route.
   String _scanMode = 'assign';
+  DateTime? _lastBackPressTime;
 
   void _selectTab(int index) {
     setState(() {
-      // Tapping the Scan tab directly opens the general scanner.
       if (index == 2) _scanMode = 'assign';
       _selectedIndex = index;
     });
@@ -50,16 +48,47 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       const ProfilePage(),
     ];
 
-    return Scaffold(
-      // Let body extend behind bottom navbar for smooth floating aesthetic
-      extendBody: true,
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: pages,
-      ),
-      bottomNavigationBar: FloatingBottomNav(
-        selectedIndex: _selectedIndex,
-        onTap: _selectTab,
+    final l = AppLocalizations.of(context);
+
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+
+        // If not on the first tab, pressing back returns to the dashboard
+        if (_selectedIndex != 0) {
+          setState(() {
+            _selectedIndex = 0;
+          });
+          return;
+        }
+
+        // On the first tab, prompt user to press back again to exit the app
+        final now = DateTime.now();
+        if (_lastBackPressTime == null ||
+            now.difference(_lastBackPressTime!) > const Duration(seconds: 2)) {
+          _lastBackPressTime = now;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(l.pressBackAgainToExit),
+              duration: const Duration(seconds: 2),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        } else {
+          SystemNavigator.pop();
+        }
+      },
+      child: Scaffold(
+        extendBody: true,
+        body: IndexedStack(
+          index: _selectedIndex,
+          children: pages,
+        ),
+        bottomNavigationBar: FloatingBottomNav(
+          selectedIndex: _selectedIndex,
+          onTap: _selectTab,
+        ),
       ),
     );
   }

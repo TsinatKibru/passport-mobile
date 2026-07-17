@@ -1916,6 +1916,12 @@ abstract class AppLocalizations {
   /// **'Biometrics not supported or enrolled on this device'**
   String get biometricNotSupported;
 
+  /// No description provided for @pressBackAgainToExit.
+  ///
+  /// In en, this message translates to:
+  /// **'Press back again to exit'**
+  String get pressBackAgainToExit;
+
   /// No description provided for @appTheme.
   ///
   /// In en, this message translates to:
