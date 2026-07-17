@@ -326,23 +326,150 @@ class _HeroDivider extends StatelessWidget {
       );
 }
 
+class ShimmerEffect extends StatefulWidget {
+  final double width;
+  final double height;
+  final BorderRadius? borderRadius;
+
+  const ShimmerEffect({
+    super.key,
+    required this.width,
+    required this.height,
+    this.borderRadius,
+  });
+
+  @override
+  State<ShimmerEffect> createState() => _ShimmerEffectState();
+}
+
+class _ShimmerEffectState extends State<ShimmerEffect> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final baseColor = isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0);
+    final highlightColor = isDark ? const Color(0xFF334155) : const Color(0xFFF1F5F9);
+
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Container(
+          width: widget.width,
+          height: widget.height,
+          decoration: BoxDecoration(
+            borderRadius: widget.borderRadius ?? BorderRadius.circular(8),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                baseColor,
+                highlightColor,
+                baseColor,
+              ],
+              stops: const [0.0, 0.5, 1.0],
+              transform: _SlidingGradientTransform(slidePercent: _controller.value),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _SlidingGradientTransform extends GradientTransform {
+  final double slidePercent;
+  const _SlidingGradientTransform({required this.slidePercent});
+
+  @override
+  Matrix4? transform(Rect bounds, {TextDirection? textDirection}) {
+    return Matrix4.translationValues(bounds.width * (slidePercent - 0.5) * 2, 0, 0);
+  }
+}
+
 class _HeroSkeleton extends StatelessWidget {
   const _HeroSkeleton();
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      height: 200,
+      width: double.infinity,
+      height: 180,
       decoration: BoxDecoration(
-        color: c.card,
+        color: isDark ? c.surfaceVariant : c.surfaceVariant.withValues(alpha: 0.8),
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: c.border),
       ),
-      child: Center(
-        child: CircularProgressIndicator(
-            strokeWidth: 2, valueColor: AlwaysStoppedAnimation(c.primary)),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: const [
+                    ShimmerEffect(width: 120, height: 12),
+                    SizedBox(height: 10),
+                    ShimmerEffect(width: 60, height: 32),
+                    SizedBox(height: 10),
+                    ShimmerEffect(width: 140, height: 14),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              const ShimmerEffect(width: 72, height: 72, borderRadius: BorderRadius.all(Radius.circular(36))),
+            ],
+          ),
+          const Spacer(),
+          Container(height: 1, color: c.border),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildHeroStatPlaceholder(),
+              _buildDividerPlaceholder(c),
+              _buildHeroStatPlaceholder(),
+              _buildDividerPlaceholder(c),
+              _buildHeroStatPlaceholder(),
+            ],
+          )
+        ],
       ),
     );
+  }
+
+  Widget _buildHeroStatPlaceholder() {
+    return const Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ShimmerEffect(width: 40, height: 16),
+        SizedBox(height: 6),
+        ShimmerEffect(width: 50, height: 10),
+      ],
+    );
+  }
+
+  Widget _buildDividerPlaceholder(AppPalette c) {
+    return Container(width: 1, height: 24, color: c.border);
   }
 }
 
@@ -547,6 +674,44 @@ class _SectionCard extends StatelessWidget {
 // Activity trend
 // ─────────────────────────────────────────────────────────────────────────────
 
+class _GraphSkeleton extends StatelessWidget {
+  const _GraphSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: const [
+            ShimmerEffect(width: 50, height: 24),
+            SizedBox(width: 6),
+            ShimmerEffect(width: 70, height: 14),
+          ],
+        ),
+        const SizedBox(height: 18),
+        SizedBox(
+          height: 120,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: const [
+              ShimmerEffect(width: 24, height: 40, borderRadius: BorderRadius.all(Radius.circular(6))),
+              ShimmerEffect(width: 24, height: 80, borderRadius: BorderRadius.all(Radius.circular(6))),
+              ShimmerEffect(width: 24, height: 50, borderRadius: BorderRadius.all(Radius.circular(6))),
+              ShimmerEffect(width: 24, height: 100, borderRadius: BorderRadius.all(Radius.circular(6))),
+              ShimmerEffect(width: 24, height: 70, borderRadius: BorderRadius.all(Radius.circular(6))),
+              ShimmerEffect(width: 24, height: 90, borderRadius: BorderRadius.all(Radius.circular(6))),
+              ShimmerEffect(width: 24, height: 110, borderRadius: BorderRadius.all(Radius.circular(6))),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _TrendCard extends ConsumerWidget {
   const _TrendCard();
 
@@ -592,7 +757,7 @@ class _TrendCard extends ConsumerWidget {
             ],
           );
         },
-        loading: () => const _CardLoader(),
+        loading: () => const _GraphSkeleton(),
         error: (_, __) => _CardError(l.dashCouldNotLoadActivity),
       ),
     );
