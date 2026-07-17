@@ -3,8 +3,8 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 const _baseUrl = String.fromEnvironment(
   'API_BASE_URL',
-  // defaultValue: 'https://passport-api-seven.vercel.app/api',
-    defaultValue: 'http://192.168.0.5:3000/api',
+  defaultValue: 'https://passport-api-seven.vercel.app/api',
+    // defaultValue: 'http://192.168.0.5:3000/api',
 );
 
 /// Single Dio instance for all API calls — CONVENTIONS.md §1.
