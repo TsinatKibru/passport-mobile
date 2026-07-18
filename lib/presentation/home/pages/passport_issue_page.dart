@@ -42,6 +42,7 @@ class _PassportIssuePageState extends ConsumerState<PassportIssuePage> {
   _StatusFilter _activeFilter = _StatusFilter.inBox;
   bool _compactView = false;
   String _searchQuery = '';
+  bool _isLastSearchFromQrScan = false;
   List<Passport> _passports = [];
   bool _isLoading = false;
   bool _isLoadingMore = false;
@@ -126,7 +127,10 @@ class _PassportIssuePageState extends ConsumerState<PassportIssuePage> {
   }
 
   void _onSearchChanged(String query) {
-    setState(() => _searchQuery = query);
+    setState(() {
+      _searchQuery = query;
+      _isLastSearchFromQrScan = false;
+    });
     final now = DateTime.now();
     _lastSearchTime = now;
     Future.delayed(const Duration(milliseconds: 450), () {
@@ -134,19 +138,48 @@ class _PassportIssuePageState extends ConsumerState<PassportIssuePage> {
     });
   }
 
+  void _onSearchQueryScanned(String code) {
+    setState(() {
+      _searchQuery = code;
+      _searchController.text = code;
+      _isLastSearchFromQrScan = true;
+    });
+    _fetchPassports(refresh: true);
+  }
+
+  void _startSearchScan() async {
+    final code = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const _SearchScanSheet(),
+    );
+    if (!mounted) return;
+    if (code != null && code.isNotEmpty) {
+      _onSearchQueryScanned(code);
+    }
+  }
+
   void _setFilter(_StatusFilter filter) {
     if (filter == _activeFilter) return;
-    setState(() => _activeFilter = filter);
+    setState(() {
+      _activeFilter = filter;
+      _isLastSearchFromQrScan = false;
+    });
     _fetchPassports(refresh: true);
   }
 
   void _startIssueVerification(Passport passport) {
+    final isPreVerified = _isLastSearchFromQrScan &&
+        _searchQuery.trim().toLowerCase() == passport.qrCode.trim().toLowerCase();
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _IssueScanSheet(
         passport: passport,
+        preVerified: isPreVerified,
         onVerified: () async {
           Navigator.pop(context);
           setState(() => _isLoading = true);
@@ -226,6 +259,7 @@ class _PassportIssuePageState extends ConsumerState<PassportIssuePage> {
                   _searchController.clear();
                   _onSearchChanged('');
                 },
+                onScanTap: _startSearchScan,
               )),
 
               // ── Filter chips ───────────────────────────────────────────
@@ -302,11 +336,13 @@ class _SearchBar extends StatelessWidget {
   final TextEditingController controller;
   final ValueChanged<String> onChanged;
   final VoidCallback onClear;
+  final VoidCallback onScanTap;
 
   const _SearchBar({
     required this.controller,
     required this.onChanged,
     required this.onClear,
+    required this.onScanTap,
   });
 
   @override
@@ -343,12 +379,27 @@ class _SearchBar extends StatelessWidget {
               color: c.textHint,
             ),
             prefixIcon: Icon(Icons.search_rounded, color: c.textBody, size: 20),
-            suffixIcon: controller.text.isNotEmpty
-                ? IconButton(
+            suffixIcon: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (controller.text.isNotEmpty) ...[
+                  IconButton(
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
                     icon: Icon(Icons.clear_rounded, size: 18, color: c.textBody),
                     onPressed: onClear,
-                  )
-                : null,
+                  ),
+                  const SizedBox(width: 12),
+                ],
+                IconButton(
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  icon: Icon(Icons.qr_code_scanner_rounded, size: 20, color: c.primary),
+                  onPressed: onScanTap,
+                ),
+                const SizedBox(width: 16),
+              ],
+            ),
             border: InputBorder.none,
             enabledBorder: InputBorder.none,
             focusedBorder: InputBorder.none,
@@ -1085,8 +1136,13 @@ class _CompactListSliver extends StatelessWidget {
 class _IssueScanSheet extends StatefulWidget {
   final Passport passport;
   final VoidCallback onVerified;
+  final bool preVerified;
 
-  const _IssueScanSheet({required this.passport, required this.onVerified});
+  const _IssueScanSheet({
+    required this.passport,
+    required this.onVerified,
+    this.preVerified = false,
+  });
 
   @override
   State<_IssueScanSheet> createState() => _IssueScanSheetState();
@@ -1094,18 +1150,22 @@ class _IssueScanSheet extends StatefulWidget {
 
 class _IssueScanSheetState extends State<_IssueScanSheet> {
   final MobileScannerController _controller = MobileScannerController(autoStart: false);
-  bool _isScanning = true;
-  bool _isVerified = false;
+  late bool _isScanning;
+  late bool _isVerified;
   String? _errorMsg;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        CameraLifecycleManager.instance.registerAndStart(_controller);
-      }
-    });
+    _isVerified = widget.preVerified;
+    _isScanning = !widget.preVerified;
+    if (!_isVerified) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          CameraLifecycleManager.instance.registerAndStart(_controller);
+        }
+      });
+    }
   }
 
   @override
@@ -1147,6 +1207,7 @@ class _IssueScanSheetState extends State<_IssueScanSheet> {
       _isScanning = true;
       _errorMsg = null;
     });
+    CameraLifecycleManager.instance.registerAndStart(_controller);
   }
 
   @override
@@ -1365,6 +1426,110 @@ class _IssueScanSheetState extends State<_IssueScanSheet> {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _SearchScanSheet extends StatefulWidget {
+  const _SearchScanSheet();
+
+  @override
+  State<_SearchScanSheet> createState() => _SearchScanSheetState();
+}
+
+class _SearchScanSheetState extends State<_SearchScanSheet> {
+  final MobileScannerController _controller = MobileScannerController(autoStart: false);
+  bool _isScanning = true;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        CameraLifecycleManager.instance.registerAndStart(_controller);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    CameraLifecycleManager.instance.unregister(_controller);
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onDetect(BarcodeCapture capture) {
+    if (!_isScanning) return;
+    final code = capture.barcodes.firstOrNull?.rawValue;
+    if (code != null) {
+      setState(() => _isScanning = false);
+      Navigator.pop(context, code);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    final l = AppLocalizations.of(context);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: c.card,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // drag handle
+          Container(
+            width: 40, height: 4,
+            decoration: BoxDecoration(
+              color: c.border,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            "Scan Passport QR",
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: c.primaryDark,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            "Scan the passport QR code to search automatically",
+            textAlign: TextAlign.center,
+            style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: c.textBody),
+          ),
+          const SizedBox(height: 20),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: SizedBox(
+              height: 240,
+              width: double.infinity,
+              child: MobileScanner(controller: _controller, onDetect: _onDetect),
+            ),
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: () => Navigator.pop(context),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: c.textBody,
+                side: BorderSide(color: c.border),
+                minimumSize: const Size.fromHeight(46),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: Text(l.cancel, style: const TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600)),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
