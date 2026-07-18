@@ -649,27 +649,14 @@ class _ScanPageState extends ConsumerState<ScanPage>
                     ),
                   ),
 
-                  // Overlay indicators (Torch, Gallery)
+                  // Overlay indicators (Torch)
                   Positioned(
                     top: 20,
                     right: 20,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        _buildRoundButton(
-                          icon: _isTorchOn ? Icons.flash_on_rounded : Icons.flash_off_rounded,
-                          onTap: _toggleTorch,
-                          isActive: _isTorchOn,
-                        ),
-                        const SizedBox(height: 12),
-                        _buildRoundButton(
-                          icon: Icons.photo_library_outlined,
-                          onTap: () async {
-                            // Gallery barcode scan integration (could mock or implement using image_picker if needed)
-                            _showFeedback(l.scanGalleryUnsupported, true);
-                          },
-                        ),
-                      ],
+                    child: _buildRoundButton(
+                      icon: _isTorchOn ? Icons.flash_on_rounded : Icons.flash_off_rounded,
+                      onTap: _toggleTorch,
+                      isActive: _isTorchOn,
                     ),
                   ),
 
