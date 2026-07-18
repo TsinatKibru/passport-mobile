@@ -3,9 +3,10 @@ import 'dart:math' as math;
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
+
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/camera_lifecycle_manager.dart';
 import '../../../data/repositories/passport_repository.dart';
 import '../../../data/repositories/box_repository.dart';
 import '../../../data/repositories/location_repository.dart';
@@ -14,6 +15,7 @@ import '../../../data/models/box.dart' as models;
 import '../../../data/models/room.dart' as room_models;
 import '../../../l10n/app_localizations.dart';
 import '../widgets/glass_card.dart';
+import 'passport_return_page.dart';
 
 class ScanPage extends ConsumerStatefulWidget {
   final String? initialMode;
@@ -30,8 +32,8 @@ class ScanPage extends ConsumerStatefulWidget {
 
 class _ScanPageState extends ConsumerState<ScanPage>
     with SingleTickerProviderStateMixin, WidgetsBindingObserver {
-  final MobileScannerController _scannerController =
-      MobileScannerController(autoStart: false);
+  MobileScannerController? _scannerController;
+  int _scannerSessionId = 0;
   final PassportRepository _passportRepo = PassportRepository();
   final BoxRepository _boxRepo = BoxRepository();
   final TextEditingController _manualController = TextEditingController();
@@ -42,6 +44,7 @@ class _ScanPageState extends ConsumerState<ScanPage>
 
   // Scanner State
   late String _activeMode; // 'assign', 'return', 'issue', 'verify', 'move_box'
+  String _previousMode = 'assign';
   bool _isTorchOn = false;
   bool _isScanning = true;
   final List<Map<String, dynamic>> _recentScans = [];
@@ -58,20 +61,30 @@ class _ScanPageState extends ConsumerState<ScanPage>
   Map<String, dynamic>? _scannedSlot;
 
   Future<void> _startScanner() async {
-    if (_scannerController.value.isRunning) return;
-    try {
-      await _scannerController.start();
-    } catch (e) {
-      debugPrint('Failed to start mobile scanner: $e');
+    if (_scannerController != null) {
+      await _stopScanner();
     }
+    final newController = MobileScannerController(autoStart: false);
+    if (mounted) {
+      setState(() {
+        _scannerController = newController;
+        _scannerSessionId++;
+      });
+    }
+    await CameraLifecycleManager.instance.registerAndStart(newController);
   }
 
   Future<void> _stopScanner() async {
-    if (!_scannerController.value.isRunning) return;
-    try {
-      await _scannerController.stop();
-    } catch (e) {
-      debugPrint('Failed to stop mobile scanner: $e');
+    if (_scannerController != null) {
+      final controllerToStop = _scannerController!;
+      await CameraLifecycleManager.instance.stopActive();
+      CameraLifecycleManager.instance.unregister(controllerToStop);
+      controllerToStop.dispose();
+      if (mounted) {
+        setState(() {
+          _scannerController = null;
+        });
+      }
     }
   }
 
@@ -122,16 +135,21 @@ class _ScanPageState extends ConsumerState<ScanPage>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _animationController.dispose();
-    _scannerController.dispose();
+    if (_scannerController != null) {
+      CameraLifecycleManager.instance.unregister(_scannerController!);
+      _scannerController!.dispose();
+    }
     _manualController.dispose();
     super.dispose();
   }
 
   void _toggleTorch() async {
-    await _scannerController.toggleTorch();
-    setState(() {
-      _isTorchOn = !_isTorchOn;
-    });
+    if (_scannerController != null) {
+      await _scannerController!.toggleTorch();
+      setState(() {
+        _isTorchOn = !_isTorchOn;
+      });
+    }
   }
 
   void _onDetect(BarcodeCapture capture) {
@@ -545,6 +563,18 @@ class _ScanPageState extends ConsumerState<ScanPage>
 
   @override
   Widget build(BuildContext context) {
+    if (_activeMode == 'return') {
+      return PassportReturnPage(
+        onBack: () async {
+          if (mounted) {
+            setState(() {
+              _activeMode = _previousMode;
+            });
+            await _startScanner();
+          }
+        },
+      );
+    }
     final l = AppLocalizations.of(context);
     final c = context.colors;
     return Scaffold(
@@ -561,10 +591,15 @@ class _ScanPageState extends ConsumerState<ScanPage>
               child: Stack(
                 children: [
                   ClipRect(
-                    child: MobileScanner(
-                      controller: _scannerController,
-                      onDetect: _onDetect,
-                    ),
+                    child: _scannerController != null
+                        ? MobileScanner(
+                            key: ValueKey('scanner_$_scannerSessionId'),
+                            controller: _scannerController!,
+                            onDetect: _onDetect,
+                          )
+                        : const Center(
+                            child: CircularProgressIndicator(),
+                          ),
                   ),
                   
                   // Stylized Scanner Bounding Frame (Ethiopian ePassport inspired)
@@ -740,19 +775,11 @@ class _ScanPageState extends ConsumerState<ScanPage>
     return GestureDetector(
       onTap: () async {
         if (mode == 'return') {
-          final previousMode = _activeMode;
-          setState(() {
-            _activeMode = mode;
-          });
-          // Wait for the expansion animation to complete
-          await Future.delayed(const Duration(milliseconds: 200));
-          if (!mounted) return;
-
-          await context.push('/scan?mode=return');
-
+          _previousMode = _activeMode;
+          await _stopScanner();
           if (mounted) {
             setState(() {
-              _activeMode = previousMode;
+              _activeMode = mode;
             });
           }
           return;

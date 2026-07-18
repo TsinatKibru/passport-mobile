@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:dio/dio.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/camera_lifecycle_manager.dart';
 import '../../../core/providers/dashboard_provider.dart';
 import '../../../data/repositories/passport_repository.dart';
 import '../../../data/repositories/box_repository.dart';
@@ -27,7 +28,8 @@ class _Constants {
 }
 
 class PassportReturnPage extends ConsumerStatefulWidget {
-  const PassportReturnPage({super.key});
+  final VoidCallback? onBack;
+  const PassportReturnPage({super.key, this.onBack});
 
   @override
   ConsumerState<PassportReturnPage> createState() => _PassportReturnPageState();
@@ -42,6 +44,10 @@ class _PassportReturnPageState extends ConsumerState<PassportReturnPage> {
   // Step and global status
   int _currentStep = 1;
   bool _isSubmitting = false;
+
+  // Scanner Controllers for Step 1 and Step 3
+  final MobileScannerController _scannerController1 = MobileScannerController(autoStart: false);
+  final MobileScannerController _scannerController3 = MobileScannerController(autoStart: false);
 
   // Step 1: Passport Scan Stack
   final List<Passport> _scannedPassports = [];
@@ -72,15 +78,37 @@ class _PassportReturnPageState extends ConsumerState<PassportReturnPage> {
   final ScrollController _step3ScrollController = ScrollController();
   final ScrollController _boxScrollController = ScrollController();
 
+  void _updateScannerForStep(int step) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (step == 1) {
+        CameraLifecycleManager.instance.registerAndStart(_scannerController1);
+      } else if (step == 3) {
+        if (_scannedBoxQr == null) {
+          CameraLifecycleManager.instance.registerAndStart(_scannerController3);
+        } else {
+          CameraLifecycleManager.instance.stopActive();
+        }
+      } else {
+        CameraLifecycleManager.instance.stopActive();
+      }
+    });
+  }
+
   @override
   void initState() {
     super.initState();
     _loadRooms();
     _boxScrollController.addListener(_onBoxScroll);
+    _updateScannerForStep(1);
   }
 
   @override
   void dispose() {
+    CameraLifecycleManager.instance.unregister(_scannerController1);
+    CameraLifecycleManager.instance.unregister(_scannerController3);
+    _scannerController1.dispose();
+    _scannerController3.dispose();
     _boxSearchController.dispose();
     _step3ScrollController.dispose();
     _boxScrollController.dispose();
@@ -143,13 +171,18 @@ class _PassportReturnPageState extends ConsumerState<PassportReturnPage> {
         _scannedBoxQr = null;
       }
     });
+    _updateScannerForStep(step);
   }
 
   void _goBack() {
     if (_currentStep > 1) {
       _goToStep(_currentStep - 1);
     } else {
-      context.pop();
+      if (widget.onBack != null) {
+        widget.onBack!();
+      } else {
+        context.pop();
+      }
     }
   }
 
@@ -274,6 +307,7 @@ class _PassportReturnPageState extends ConsumerState<PassportReturnPage> {
       _isLoadingBoxes = true;
       _currentStep = 2;
     });
+    _updateScannerForStep(2);
 
     try {
       final response = await _boxRepo.getAvailablePaginated(
@@ -309,6 +343,7 @@ class _PassportReturnPageState extends ConsumerState<PassportReturnPage> {
       _selectedBox = box;
       _currentStep = 3;
     });
+    _updateScannerForStep(3);
   }
 
   void _onSearchChanged(String query) {
@@ -347,6 +382,7 @@ class _PassportReturnPageState extends ConsumerState<PassportReturnPage> {
         _scannedBoxQr = scannedQr;
         _clearMismatch();
       });
+      await CameraLifecycleManager.instance.stopActive();
       _showFeedback(l.returnBoxQrVerified, false);
     } else {
       setState(() => _isSubmitting = true);
@@ -629,7 +665,11 @@ class _PassportReturnPageState extends ConsumerState<PassportReturnPage> {
                         style: _buttonStyle,
                         onPressed: () {
                           Navigator.pop(ctx);
-                          context.pop();
+                          if (widget.onBack != null) {
+                            widget.onBack!();
+                          } else {
+                            context.pop();
+                          }
                         },
                         child: Text(l.returnBackToDashboard),
                       ),
@@ -674,6 +714,7 @@ class _PassportReturnPageState extends ConsumerState<PassportReturnPage> {
       _mismatchMessage = null;
       _currentStep = 1;
     });
+    _updateScannerForStep(1);
   }
 
   // ============================================================================
@@ -832,6 +873,7 @@ class _PassportReturnPageState extends ConsumerState<PassportReturnPage> {
               child: Stack(
                 children: [
                   MobileScanner(
+                    controller: _scannerController1,
                     onDetect: (capture) {
                       final barcode = capture.barcodes.firstOrNull;
                       if (barcode?.rawValue != null) {
@@ -1181,6 +1223,7 @@ class _PassportReturnPageState extends ConsumerState<PassportReturnPage> {
                   child: Stack(
                     children: [
                       MobileScanner(
+                        controller: _scannerController3,
                         onDetect: (capture) {
                           final barcode = capture.barcodes.firstOrNull;
                           if (barcode?.rawValue != null) {

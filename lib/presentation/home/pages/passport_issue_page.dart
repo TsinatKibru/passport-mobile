@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/camera_lifecycle_manager.dart';
 import '../../../core/providers/dashboard_provider.dart';
 import '../../../data/repositories/passport_repository.dart';
 import '../../../data/models/passport.dart';
@@ -1092,13 +1093,24 @@ class _IssueScanSheet extends StatefulWidget {
 }
 
 class _IssueScanSheetState extends State<_IssueScanSheet> {
-  final MobileScannerController _controller = MobileScannerController();
+  final MobileScannerController _controller = MobileScannerController(autoStart: false);
   bool _isScanning = true;
   bool _isVerified = false;
   String? _errorMsg;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        CameraLifecycleManager.instance.registerAndStart(_controller);
+      }
+    });
+  }
+
+  @override
   void dispose() {
+    CameraLifecycleManager.instance.unregister(_controller);
     _controller.dispose();
     super.dispose();
   }
