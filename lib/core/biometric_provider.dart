@@ -82,6 +82,9 @@ class BiometricNotifier extends Notifier<BiometricState> {
         }
       } catch (e) {
         debugPrint('Failed to authenticate silently: $e');
+        if (e.toString().contains('userCanceled')) {
+          return 'userCanceled';
+        }
         return 'Verification error: ${e.toString()}';
       }
     }

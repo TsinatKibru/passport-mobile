@@ -200,7 +200,7 @@ class ProfilePage extends ConsumerWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Image.asset(
-                      'assets/images/ics-logo.png',
+                      'assets/images/sidebar-decoration-v2.png',
                       height: 32,
                       errorBuilder: (context, error, stackTrace) => Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -536,7 +536,7 @@ class ProfilePage extends ConsumerWidget {
                 value: bioState.isEnabled,
                 onChanged: (val) async {
                   final errorMsg = await ref.read(biometricProvider.notifier).setBiometricEnabled(val);
-                  if (errorMsg != null && context.mounted) {
+                  if (errorMsg != null && errorMsg != 'userCanceled' && context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(errorMsg),

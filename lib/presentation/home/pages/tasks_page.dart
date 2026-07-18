@@ -48,7 +48,45 @@ class _TasksPageState extends State<TasksPage> {
   @override
   void initState() {
     super.initState();
-    _loadRooms();
+    _initializeVaultExplorer();
+  }
+
+  Future<void> _initializeVaultExplorer() async {
+    setState(() => _isLoading = true);
+    try {
+      final list = await _locationRepo.getRooms();
+      _rooms = list;
+      if (list.length == 1) {
+        final room = list.first;
+        _selectedRoom = room;
+        final shelvesList = await _locationRepo.getShelves(room.id);
+        setState(() {
+          _shelves = shelvesList;
+          _currentLevel = 'shelves';
+          _selectedShelf = null;
+          _selectedRow = null;
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _currentLevel = 'rooms';
+          _selectedRoom = null;
+          _selectedShelf = null;
+          _selectedRow = null;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error initializing vault explorer: $e');
+      setState(() {
+        _rooms = [];
+        _currentLevel = 'rooms';
+        _selectedRoom = null;
+        _selectedShelf = null;
+        _selectedRow = null;
+        _isLoading = false;
+      });
+    }
   }
 
   Future<void> _loadRooms() async {
@@ -168,7 +206,7 @@ class _TasksPageState extends State<TasksPage> {
                       color: c.textBody.withOpacity(0.7))),
             ],
           ),
-          if (_currentLevel != 'rooms')
+          if (_currentLevel != 'rooms' && !(_rooms.length <= 1 && _currentLevel == 'shelves'))
             IconButton(
               icon: Icon(Icons.arrow_back_ios_new_rounded, color: c.primary),
               onPressed: _navigateBack,
@@ -180,16 +218,24 @@ class _TasksPageState extends State<TasksPage> {
 
   Widget _buildBreadcrumbs() {
     final c = context.colors;
-    final crumbs = <Widget>[
-      GestureDetector(
-        onTap: _loadRooms,
-        child: Text(AppLocalizations.of(context).vaultRooms,
-            style: TextStyle(color: c.primary, fontWeight: FontWeight.bold, fontSize: 13)),
-      ),
-    ];
+    final crumbs = <Widget>[];
+
+    final showRoomsBreadcrumb = _rooms.length > 1;
+
+    if (showRoomsBreadcrumb) {
+      crumbs.add(
+        GestureDetector(
+          onTap: _loadRooms,
+          child: Text(AppLocalizations.of(context).vaultRooms,
+              style: TextStyle(color: c.primary, fontWeight: FontWeight.bold, fontSize: 13)),
+        ),
+      );
+    }
 
     if (_selectedRoom != null) {
-      crumbs.add(Icon(Icons.chevron_right, size: 14, color: c.textBody));
+      if (showRoomsBreadcrumb) {
+        crumbs.add(Icon(Icons.chevron_right, size: 14, color: c.textBody));
+      }
       crumbs.add(GestureDetector(
         onTap: () => _loadShelves(_selectedRoom!),
         child: Text(_selectedRoom!.name,
