@@ -123,7 +123,7 @@ class _ScanPageState extends ConsumerState<ScanPage>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (!widget.isActive) return;
+    if (!widget.isActive || _activeMode == 'return') return;
     if (state == AppLifecycleState.resumed) {
       unawaited(_startScanner());
     } else {
@@ -762,19 +762,27 @@ class _ScanPageState extends ConsumerState<ScanPage>
     return GestureDetector(
       onTap: () async {
         if (mode == 'return') {
-          _previousMode = _activeMode;
-          await _stopScanner();
-          if (mounted) {
-            setState(() {
-              _activeMode = mode;
-            });
+          if (_activeMode != 'return') {
+            _previousMode = _activeMode;
+            await _stopScanner();
+            if (mounted) {
+              setState(() {
+                _activeMode = mode;
+              });
+            }
           }
           return;
         }
+
+        final comingFromReturn = _activeMode == 'return';
         setState(() {
           _activeMode = mode;
           _resetCurrentScan();
         });
+
+        if (comingFromReturn || _scannerController == null) {
+          await _startScanner();
+        }
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),

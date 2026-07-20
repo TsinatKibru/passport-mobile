@@ -35,7 +35,7 @@ class PassportReturnPage extends ConsumerStatefulWidget {
   ConsumerState<PassportReturnPage> createState() => _PassportReturnPageState();
 }
 
-class _PassportReturnPageState extends ConsumerState<PassportReturnPage> {
+class _PassportReturnPageState extends ConsumerState<PassportReturnPage> with WidgetsBindingObserver {
   // Repositories
   final PassportRepository _passportRepo = PassportRepository();
   final BoxRepository _boxRepo = BoxRepository();
@@ -98,13 +98,24 @@ class _PassportReturnPageState extends ConsumerState<PassportReturnPage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadRooms();
     _boxScrollController.addListener(_onBoxScroll);
     _updateScannerForStep(1);
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _updateScannerForStep(_currentStep);
+    } else if (state == AppLifecycleState.inactive || state == AppLifecycleState.paused) {
+      CameraLifecycleManager.instance.stopActive();
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     CameraLifecycleManager.instance.unregister(_scannerController1);
     CameraLifecycleManager.instance.unregister(_scannerController3);
     _scannerController1.dispose();
