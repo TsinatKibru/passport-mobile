@@ -86,6 +86,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
       if (mounted) {
         setState(() {
+          _loading = false;
           _success = true;
         });
       }
@@ -94,9 +95,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         setState(() {
           _loading = false;
         });
-      }
-
-      if (mounted) {
         final l = AppLocalizations.of(context);
         final error = ref.read(authProvider).errorMessage ?? l.loginFailed;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -116,6 +114,7 @@ Widget build(BuildContext context) {
   final l = AppLocalizations.of(context);
   final c = context.colors;
   final authState = ref.watch(authProvider);
+  final isSubmitting = _loading || authState.isLoading;
   final isDark = Theme.of(context).brightness == Brightness.dark;
   final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
   final screenHeight = MediaQuery.of(context).size.height;
@@ -155,7 +154,7 @@ Widget build(BuildContext context) {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
+                    color: Colors.black.withValues(alpha: 0.08),
                     blurRadius: 20,
                     offset: const Offset(0, -2),
                   ),
@@ -202,9 +201,9 @@ Widget build(BuildContext context) {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           decoration: BoxDecoration(
-                            color: c.danger.withOpacity(0.08),
+                            color: c.danger.withValues(alpha: 0.08),
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: c.danger.withOpacity(0.2)),
+                            border: Border.all(color: c.danger.withValues(alpha: 0.2)),
                           ),
                           child: Row(
                             children: [
@@ -228,7 +227,7 @@ Widget build(BuildContext context) {
 
                       TextFormField(
                         controller: _emailController,
-                        enabled: !_loading,
+                        enabled: !isSubmitting,
                         keyboardType: TextInputType.emailAddress,
                         style: TextStyle(
                           fontSize: 14,
@@ -287,7 +286,7 @@ Widget build(BuildContext context) {
 
                       TextFormField(
                         controller: _passwordController,
-                        enabled: !_loading,
+                        enabled: !isSubmitting,
                         obscureText: _obscurePassword,
 
                         style: TextStyle(
@@ -316,7 +315,7 @@ Widget build(BuildContext context) {
                               size: 20,
                             ),
 
-                            onPressed: _loading ? null : () {
+                            onPressed: isSubmitting ? null : () {
                               setState(() {
                                 _obscurePassword =
                                     !_obscurePassword;
@@ -390,7 +389,7 @@ Widget build(BuildContext context) {
                                 child: Checkbox(
                                   value: _rememberMe,
 
-                                  onChanged: _loading ? null : (value) {
+                                  onChanged: isSubmitting ? null : (value) {
                                     setState(() {
                                       _rememberMe =
                                           value ?? false;
@@ -424,7 +423,7 @@ Widget build(BuildContext context) {
 
 
                           TextButton(
-                            onPressed: _loading ? null : () {
+                            onPressed: isSubmitting ? null : () {
                               showModalBottomSheet(
                                 context: context,
                                 isScrollControlled: true,
@@ -444,8 +443,8 @@ Widget build(BuildContext context) {
                                 color: c.primary,
                                 fontWeight:
                                     FontWeight.w500,
+                                ),
                               ),
-                            ),
                           ),
                         ],
                       ),
@@ -459,10 +458,12 @@ Widget build(BuildContext context) {
                         height: 48,
 
                         child: ElevatedButton(
-                          onPressed: _loading || _success ? null : _submit,
+                          onPressed: isSubmitting || _success ? null : _submit,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: _success ? c.success : c.primary,
+                            disabledBackgroundColor: _success ? c.success : c.primary,
                             foregroundColor: c.onPrimary,
+                            disabledForegroundColor: c.onPrimary,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
@@ -474,12 +475,12 @@ Widget build(BuildContext context) {
                                   color: c.onPrimary,
                                   size: 24,
                                 )
-                              : _loading
+                              : isSubmitting
                                   ? SizedBox(
                                       height: 20,
                                       width: 20,
                                       child: CircularProgressIndicator(
-                                        strokeWidth: 2,
+                                        strokeWidth: 2.5,
                                         valueColor: AlwaysStoppedAnimation<Color>(
                                           c.onPrimary,
                                         ),
@@ -660,9 +661,9 @@ class __ForgotPasswordBottomSheetState
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: BoxDecoration(
-                color: c.danger.withOpacity(0.08),
+                color: c.danger.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: c.danger.withOpacity(0.2)),
+                border: Border.all(color: c.danger.withValues(alpha: 0.2)),
               ),
               child: Row(
                 children: [

@@ -10,22 +10,26 @@ class AuthState {
   final AuthStatus status;
   final User? user;
   final String? errorMessage;
+  final bool isLoading;
 
   AuthState({
     required this.status,
     this.user,
     this.errorMessage,
+    this.isLoading = false,
   });
 
   AuthState copyWith({
     AuthStatus? status,
     User? user,
     String? errorMessage,
+    bool? isLoading,
   }) {
     return AuthState(
       status: status ?? this.status,
       user: user ?? this.user,
       errorMessage: errorMessage ?? this.errorMessage,
+      isLoading: isLoading ?? this.isLoading,
     );
   }
 }
@@ -49,26 +53,28 @@ class AuthNotifier extends Notifier<AuthState> {
           state = AuthState(
             status: AuthStatus.authenticated,
             user: freshUser,
+            isLoading: false,
           );
         } else {
           // If profile fetch failed, check if token was deleted by the 401 interceptor
           final stillHasToken = await repo.isLoggedIn();
           if (!stillHasToken) {
-            state = AuthState(status: AuthStatus.unauthenticated);
+            state = AuthState(status: AuthStatus.unauthenticated, isLoading: false);
           } else {
             // Server was offline or unreachable: fall back to cached user profile
             final user = await repo.getCachedUser();
             state = AuthState(
               status: AuthStatus.authenticated,
               user: user,
+              isLoading: false,
             );
           }
         }
       } else {
-        state = AuthState(status: AuthStatus.unauthenticated);
+        state = AuthState(status: AuthStatus.unauthenticated, isLoading: false);
       }
     } catch (e) {
-      state = AuthState(status: AuthStatus.unauthenticated);
+      state = AuthState(status: AuthStatus.unauthenticated, isLoading: false);
     }
   }
 
@@ -77,7 +83,7 @@ class AuthNotifier extends Notifier<AuthState> {
   }
 
   Future<bool> login(String email, String password) async {
-    state = state.copyWith(errorMessage: null);
+    state = state.copyWith(isLoading: true, errorMessage: null);
     final repo = ref.read(authRepositoryProvider);
     try {
       final user = await repo.login(email, password);
@@ -85,6 +91,7 @@ class AuthNotifier extends Notifier<AuthState> {
         state = AuthState(
           status: AuthStatus.authenticated,
           user: user,
+          isLoading: false,
         );
         _invalidateDashboardProviders();
         return true;
@@ -92,6 +99,7 @@ class AuthNotifier extends Notifier<AuthState> {
         state = AuthState(
           status: AuthStatus.unauthenticated,
           errorMessage: 'Invalid credentials or connection error',
+          isLoading: false,
         );
         return false;
       }
@@ -109,12 +117,14 @@ class AuthNotifier extends Notifier<AuthState> {
       state = AuthState(
         status: AuthStatus.unauthenticated,
         errorMessage: errorMsg,
+        isLoading: false,
       );
       return false;
     } catch (_) {
       state = AuthState(
         status: AuthStatus.unauthenticated,
         errorMessage: 'Connection error',
+        isLoading: false,
       );
       return false;
     }

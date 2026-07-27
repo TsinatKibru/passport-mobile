@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'auth_provider.dart';
+import 'theme/app_theme.dart';
 import '../presentation/login_screen.dart';
 import '../presentation/home/home_screen.dart';
 import '../presentation/home/pages/scan_page.dart';
@@ -38,11 +39,30 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/',
         builder: (context, state) {
           final authState = ref.watch(authProvider);
-          // Show loading screen while checking auth
+          // Show branded splash screen while checking auth
           if (authState.status == AuthStatus.unknown) {
-            return const Scaffold(
+            final isDark = Theme.of(context).brightness == Brightness.dark;
+            final c = context.colors;
+            return Scaffold(
+              backgroundColor: c.surface,
               body: Center(
-                child: CircularProgressIndicator(),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Image.asset(
+                      isDark
+                          ? 'assets/images/dark_mode_brand.png'
+                          : 'assets/images/light_mode_brand.png',
+                      height: 120,
+                      fit: BoxFit.contain,
+                    ),
+                    const SizedBox(height: 32),
+                    CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(c.primary),
+                      strokeWidth: 3,
+                    ),
+                  ],
+                ),
               ),
             );
           }
