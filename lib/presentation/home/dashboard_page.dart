@@ -69,8 +69,20 @@ class DashboardPage extends ConsumerWidget {
 
                     // Quick actions (single, de-duplicated action surface)
                     _QuickActions(
-                      onIssue: () => context.push('/scan?mode=issue'),
-                      onReturn: () => context.push('/scan?mode=return'),
+                      onIssue: () {
+                        if (onOpenScan != null) {
+                          onOpenScan!('issue');
+                        } else {
+                          context.push('/scan?mode=issue');
+                        }
+                      },
+                      onReturn: () {
+                        if (onOpenScan != null) {
+                          onOpenScan!('return');
+                        } else {
+                          context.push('/scan?mode=return');
+                        }
+                      },
                       onAssign: () => onOpenScan?.call('assign'),
                       onVerify: () => onOpenScan?.call('verify'),
                     ),

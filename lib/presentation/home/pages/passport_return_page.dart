@@ -29,7 +29,13 @@ class _Constants {
 
 class PassportReturnPage extends ConsumerStatefulWidget {
   final VoidCallback? onBack;
-  const PassportReturnPage({super.key, this.onBack});
+  final bool isEmbeddedInNav;
+
+  const PassportReturnPage({
+    super.key,
+    this.onBack,
+    this.isEmbeddedInNav = false,
+  });
 
   @override
   ConsumerState<PassportReturnPage> createState() => _PassportReturnPageState();
@@ -742,17 +748,19 @@ class _PassportReturnPageState extends ConsumerState<PassportReturnPage> with Wi
     textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
   );
 
+  double get _bottomPadding => widget.isEmbeddedInNav ? 100.0 : 20.0;
+
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
     return Scaffold(
       backgroundColor: c.surface,
       body: FingerprintBackground(
-        child: Column(
-          children: [
-            SafeArea(
-              bottom: false,
-              child: Padding(
+        child: SafeArea(
+          bottom: !widget.isEmbeddedInNav,
+          child: Column(
+            children: [
+              Padding(
                 padding: const EdgeInsets.fromLTRB(12, 8, 20, 8),
                 child: Row(
                   children: [
@@ -779,10 +787,10 @@ class _PassportReturnPageState extends ConsumerState<PassportReturnPage> with Wi
                   ],
                 ),
               ),
-            ),
-            _buildStepIndicator(),
-            Expanded(child: _buildStepContent()),
-          ],
+              _buildStepIndicator(),
+              Expanded(child: _buildStepContent()),
+            ],
+          ),
         ),
       ),
     );
@@ -879,7 +887,7 @@ class _PassportReturnPageState extends ConsumerState<PassportReturnPage> with Wi
     final l = AppLocalizations.of(context);
     final c = context.colors;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
+      padding: EdgeInsets.fromLTRB(20, 0, 20, _bottomPadding),
       child: Column(
         children: [
           Expanded(
@@ -995,7 +1003,7 @@ class _PassportReturnPageState extends ConsumerState<PassportReturnPage> with Wi
     final l = AppLocalizations.of(context);
     final c = context.colors;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
+      padding: EdgeInsets.fromLTRB(20, 0, 20, _bottomPadding),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1206,7 +1214,7 @@ class _PassportReturnPageState extends ConsumerState<PassportReturnPage> with Wi
     final c = context.colors;
     final boxVerified = _scannedBoxQr != null;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
+      padding: EdgeInsets.fromLTRB(20, 0, 20, _bottomPadding),
       child: SingleChildScrollView(
         controller: _step3ScrollController,
         child: Column(

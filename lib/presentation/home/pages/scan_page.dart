@@ -590,6 +590,7 @@ class _ScanPageState extends ConsumerState<ScanPage>
   Widget build(BuildContext context) {
     if (_activeMode == 'return') {
       return PassportReturnPage(
+        isEmbeddedInNav: true,
         onBack: () async {
           if (mounted) {
             setState(() {
