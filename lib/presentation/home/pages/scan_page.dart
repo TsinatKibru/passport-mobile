@@ -53,6 +53,7 @@ class _ScanPageState extends ConsumerState<ScanPage>
   String? _lastScannedCode;
   DateTime? _lastScanTime;
   static const Duration _scanCooldown = Duration(seconds: 2);
+  bool _isDialogOpen = false;
 
   // Scanned objects
   models.Box? _scannedBox;
@@ -153,7 +154,7 @@ class _ScanPageState extends ConsumerState<ScanPage>
   }
 
   void _onDetect(BarcodeCapture capture) {
-    if (!_isScanning) return;
+    if (!_isScanning || _isDialogOpen) return;
     final barcode = capture.barcodes.firstOrNull;
     if (barcode?.rawValue != null) {
       _processScannedCode(barcode!.rawValue!);
@@ -311,7 +312,8 @@ class _ScanPageState extends ConsumerState<ScanPage>
               'success': true,
             });
           });
-          _showVerificationDialog(passport);
+          await _showVerificationDialog(passport);
+          return;
         } else {
           // Check box instead
           final box = await _boxRepo.getByQr(code);
@@ -325,7 +327,8 @@ class _ScanPageState extends ConsumerState<ScanPage>
                 'success': true,
               });
             });
-            _showBoxDetailsDialog(box);
+            await _showBoxDetailsDialog(box);
+            return;
           } else {
             _showFeedback(l.scanQrNotRegistered(code), true);
             hasError = true;
@@ -451,10 +454,14 @@ class _ScanPageState extends ConsumerState<ScanPage>
     }
   }
 
-  void _showVerificationDialog(Passport p) {
+  Future<void> _showVerificationDialog(Passport p) async {
+    if (_isDialogOpen) return;
+    _isDialogOpen = true;
+    setState(() => _isScanning = false);
+
     final l = AppLocalizations.of(context);
     final c = context.colors;
-    showDialog(
+    await showDialog(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -509,12 +516,23 @@ class _ScanPageState extends ConsumerState<ScanPage>
         ],
       ),
     );
+
+    _isDialogOpen = false;
+    _lastScanTime = DateTime.now();
+    await Future.delayed(const Duration(milliseconds: 1500));
+    if (mounted && !_isDialogOpen) {
+      setState(() => _isScanning = true);
+    }
   }
 
-  void _showBoxDetailsDialog(models.Box box) {
+  Future<void> _showBoxDetailsDialog(models.Box box) async {
+    if (_isDialogOpen) return;
+    _isDialogOpen = true;
+    setState(() => _isScanning = false);
+
     final l = AppLocalizations.of(context);
     final c = context.colors;
-    showDialog(
+    await showDialog(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -559,6 +577,13 @@ class _ScanPageState extends ConsumerState<ScanPage>
         ],
       ),
     );
+
+    _isDialogOpen = false;
+    _lastScanTime = DateTime.now();
+    await Future.delayed(const Duration(milliseconds: 1500));
+    if (mounted && !_isDialogOpen) {
+      setState(() => _isScanning = true);
+    }
   }
 
   @override
@@ -727,7 +752,7 @@ class _ScanPageState extends ConsumerState<ScanPage>
                     // Actions list / Scanned results
                     _buildScannedSection(),
                     
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 100),
                   ],
                 ),
               ),

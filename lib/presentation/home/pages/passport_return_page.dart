@@ -64,7 +64,6 @@ class _PassportReturnPageState extends ConsumerState<PassportReturnPage> with Wi
   int _currentPage = 1;
   int _totalPages = 1;
   int _totalBoxes = 0;
-  bool _hasMoreBoxes = false;
   String _searchQuery = '';
   String? _selectedRoomId;
   List<Room> _rooms = [];
@@ -148,7 +147,9 @@ class _PassportReturnPageState extends ConsumerState<PassportReturnPage> with Wi
 
     if (!mounted) return;
     final c = context.colors;
-    ScaffoldMessenger.of(context).showSnackBar(
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
       SnackBar(
         content: Text(message, style: const TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: isError ? c.danger : c.success,
@@ -161,7 +162,6 @@ class _PassportReturnPageState extends ConsumerState<PassportReturnPage> with Wi
   void _raiseMismatch(String message) {
     if (!mounted) return;
     setState(() => _mismatchMessage = message);
-    _showFeedback(message, true);
     if (_currentStep == 3 && _step3ScrollController.hasClients) {
       _step3ScrollController.animateTo(0, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
     }
@@ -338,7 +338,6 @@ class _PassportReturnPageState extends ConsumerState<PassportReturnPage> with Wi
         }
         _totalPages = response.totalPages;
         _totalBoxes = response.total;
-        _hasMoreBoxes = response.hasMore;
         _isLoadingBoxes = false;
       });
     } catch (e) {
@@ -387,7 +386,10 @@ class _PassportReturnPageState extends ConsumerState<PassportReturnPage> with Wi
     if (_isSubmitting) return;
 
     final l = AppLocalizations.of(context);
-    if (scannedQr == _selectedBox!.qrCode) {
+    final normalizedScanned = scannedQr.trim();
+    final isMatchingSelected = normalizedScanned == _selectedBox!.qrCode.trim();
+
+    if (isMatchingSelected) {
       if (!mounted) return;
       setState(() {
         _scannedBoxQr = scannedQr;
@@ -398,7 +400,7 @@ class _PassportReturnPageState extends ConsumerState<PassportReturnPage> with Wi
     } else {
       setState(() => _isSubmitting = true);
       try {
-        final scannedBox = await _boxRepo.getByQr(scannedQr);
+        final scannedBox = await _boxRepo.getByQr(normalizedScanned);
         setState(() => _isSubmitting = false);
 
         if (scannedBox == null) {
@@ -537,12 +539,15 @@ class _PassportReturnPageState extends ConsumerState<PassportReturnPage> with Wi
       ref.invalidate(activityTrendProvider);
       ref.invalidate(roomOccupancyProvider);
 
+      if (!mounted) return;
       setState(() => _isSubmitting = false);
       _showSuccessDialog();
     } on DioException catch (dioErr) {
+      if (!mounted) return;
       setState(() => _isSubmitting = false);
       _handleReturnError(dioErr);
     } catch (e) {
+      if (!mounted) return;
       setState(() => _isSubmitting = false);
       _showFeedback(AppLocalizations.of(context).returnFailed('$e'), true);
     }
@@ -874,7 +879,7 @@ class _PassportReturnPageState extends ConsumerState<PassportReturnPage> with Wi
     final l = AppLocalizations.of(context);
     final c = context.colors;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
       child: Column(
         children: [
           Expanded(
@@ -990,7 +995,7 @@ class _PassportReturnPageState extends ConsumerState<PassportReturnPage> with Wi
     final l = AppLocalizations.of(context);
     final c = context.colors;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1201,7 +1206,7 @@ class _PassportReturnPageState extends ConsumerState<PassportReturnPage> with Wi
     final c = context.colors;
     final boxVerified = _scannedBoxQr != null;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
       child: SingleChildScrollView(
         controller: _step3ScrollController,
         child: Column(

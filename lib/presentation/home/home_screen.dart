@@ -22,6 +22,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   DateTime? _lastBackPressTime;
 
   void _selectTab(int index) {
+    ScaffoldMessenger.of(context).clearSnackBars();
     setState(() {
       if (index == 2) _scanMode = 'assign';
       _selectedIndex = index;
@@ -29,6 +30,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   void _openScan(String mode) {
+    ScaffoldMessenger.of(context).clearSnackBars();
     setState(() {
       _scanMode = mode;
       _selectedIndex = 2;
