@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:mobile_scanner/mobile_scanner.dart';
@@ -65,7 +66,12 @@ class _ScanPageState extends ConsumerState<ScanPage>
     if (_scannerController != null) {
       await _stopScanner();
     }
-    final newController = MobileScannerController(autoStart: false);
+    final newController = MobileScannerController(
+      autoStart: false,
+      formats: const [BarcodeFormat.qrCode],
+      detectionSpeed: DetectionSpeed.noDuplicates,
+      returnImage: false,
+    );
     if (mounted) {
       setState(() {
         _scannerController = newController;
@@ -157,6 +163,7 @@ class _ScanPageState extends ConsumerState<ScanPage>
     if (!_isScanning || _isDialogOpen) return;
     final barcode = capture.barcodes.firstOrNull;
     if (barcode?.rawValue != null) {
+      HapticFeedback.lightImpact();
       _processScannedCode(barcode!.rawValue!);
     }
   }

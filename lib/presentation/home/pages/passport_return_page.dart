@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
@@ -18,7 +19,6 @@ import '../widgets/fingerprint_background.dart';
 
 /// CENTRAL CONSTANTS - Single source of truth for all magic numbers
 class _Constants {
-  static const int scanDebounceMs = 800;
   static const int feedbackThrottleMs = 500;
   static const int processingQrExpiryMs = 2000;
   static const int searchDebounceMs = 500;
@@ -52,15 +52,24 @@ class _PassportReturnPageState extends ConsumerState<PassportReturnPage> with Wi
   bool _isSubmitting = false;
 
   // Scanner Controllers for Step 1 and Step 3
-  final MobileScannerController _scannerController1 = MobileScannerController(autoStart: false);
-  final MobileScannerController _scannerController3 = MobileScannerController(autoStart: false);
+  final MobileScannerController _scannerController1 = MobileScannerController(
+    autoStart: false,
+    formats: const [BarcodeFormat.qrCode],
+    detectionSpeed: DetectionSpeed.noDuplicates,
+    returnImage: false,
+  );
+  final MobileScannerController _scannerController3 = MobileScannerController(
+    autoStart: false,
+    formats: const [BarcodeFormat.qrCode],
+    detectionSpeed: DetectionSpeed.noDuplicates,
+    returnImage: false,
+  );
 
   // Step 1: Passport Scan Stack
   final List<Passport> _scannedPassports = [];
   final Set<String> _detectedBarcodes = {};
   final Set<String> _failedQrs = {};
   DateTime? _lastFeedbackTime;
-  Timer? _scanDebounceTimer;
 
   // Step 2: Box Selection & Pagination
   List<models.Box> _availableBoxes = [];
@@ -129,7 +138,6 @@ class _PassportReturnPageState extends ConsumerState<PassportReturnPage> with Wi
     _step3ScrollController.dispose();
     _boxScrollController.dispose();
     _searchDebounceTimer?.cancel();
-    _scanDebounceTimer?.cancel();
     super.dispose();
   }
 
@@ -240,27 +248,23 @@ class _PassportReturnPageState extends ConsumerState<PassportReturnPage> with Wi
   // STEP 1: SCAN PASSPORTS
   // ============================================================================
   void _onBarcode(String code) {
-    if (_detectedBarcodes.contains(code) || _failedQrs.contains(code)) {
+    final trimmed = code.trim();
+    if (trimmed.isEmpty) return;
+    if (_detectedBarcodes.contains(trimmed) ||
+        _failedQrs.contains(trimmed) ||
+        _scannedPassports.any((p) => p.qrCode == trimmed)) {
       return;
     }
 
-    _scanDebounceTimer?.cancel();
-    _scanDebounceTimer = Timer(
-      const Duration(milliseconds: _Constants.scanDebounceMs),
-      () {
-        if (mounted) {
-          _addPassportByQr(code);
-        }
-      }
-    );
+    _detectedBarcodes.add(trimmed);
+    HapticFeedback.lightImpact();
+    _addPassportByQr(trimmed);
   }
 
   Future<void> _addPassportByQr(String code) async {
     if (_scannedPassports.any((p) => p.qrCode == code) || _failedQrs.contains(code)) {
       return;
     }
-
-    _detectedBarcodes.add(code);
 
     final l = AppLocalizations.of(context);
     try {

@@ -1149,7 +1149,12 @@ class _IssueScanSheet extends StatefulWidget {
 }
 
 class _IssueScanSheetState extends State<_IssueScanSheet> {
-  final MobileScannerController _controller = MobileScannerController(autoStart: false);
+  final MobileScannerController _controller = MobileScannerController(
+    autoStart: false,
+    formats: const [BarcodeFormat.qrCode],
+    detectionSpeed: DetectionSpeed.noDuplicates,
+    returnImage: false,
+  );
   late bool _isScanning;
   late bool _isVerified;
   String? _errorMsg;
@@ -1438,7 +1443,12 @@ class _SearchScanSheet extends StatefulWidget {
 }
 
 class _SearchScanSheetState extends State<_SearchScanSheet> {
-  final MobileScannerController _controller = MobileScannerController(autoStart: false);
+  final MobileScannerController _controller = MobileScannerController(
+    autoStart: false,
+    formats: const [BarcodeFormat.qrCode],
+    detectionSpeed: DetectionSpeed.noDuplicates,
+    returnImage: false,
+  );
   bool _isScanning = true;
 
   @override
